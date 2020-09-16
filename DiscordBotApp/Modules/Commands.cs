@@ -7,7 +7,7 @@ using System.Net;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Security.Cryptography.X509Certificates;
 
 namespace DiscordBotApp.Modules
 {
@@ -19,16 +19,16 @@ namespace DiscordBotApp.Modules
         public async Task Ping(string teamnamess)
         {
             string[,] teamArray = new string[5, 2];
-            
+
             var google = new googleSheet();
             IList<IList<Object>> values = google.Google();
             //Console.WriteLine("am I in here?" + google.Google());
-            foreach(var row in values)
+            foreach (var row in values)
             {
-               await ReplyAsync($"{row[0]}, {row[1]}");
+                await ReplyAsync($"{row[0]}, {row[1]}");
             }
-            
-           // await ReplyAsync("recieved"); 
+
+            // await ReplyAsync("recieved"); 
         }
 
 
@@ -85,20 +85,22 @@ namespace DiscordBotApp.Modules
 
         }
 
-       /* [Command("updateroster")]
-        // updates roster, can be used by team captain
-        public async Task UpdateRoster(IUser user)
-        {
-            var user = Context.User as SocketGuildUser;
-            var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+        /* [Command("updateroster")]
+         // updates roster, can be used by team captain
+         public async Task UpdateRoster(IUser user)
+         {
+             var user = Context.User as SocketGuildUser;
+             var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
-        }*/
+         }*/
 
         [Command("createteam")]
         //can be used by admin/owner to create new team on google sheet api
-        public async Task CreateTeam(string sampleteam, IGuildUser calledUser)
+        [Summary
+      ("Create team with no org")]
+        public async Task CreateTeam(string teamNameBeingCreated, IGuildUser calledUser)
         {
-           
+
             var user = Context.User as SocketGuildUser;
             var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -110,14 +112,24 @@ namespace DiscordBotApp.Modules
             {
                 try
                 {
-                    await ReplyAsync($"Team {sampleteam} created, added {sampleteam} and Team Captain role to {calledUser}");
-                    var createdRole = await Context.Guild.CreateRoleAsync(sampleteam, default, default, false, default);
+                    await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
+                    var permissions = new GuildPermissions(0);
+                    ulong permissionsForce = 104193601;
+                    var addPermissions = new OverwritePermissions(permissionsForce, default);
+                    ulong assignChannelIdTeamText = 705651659736350732;
+                    ulong assignChannelIdTeamVoice = 705651662261321783;
+                    
+                    var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                    var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
+                   
+                    var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
+                    await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
                     await calledUser.AddRoleAsync(createdRole);
                     await calledUser.AddRoleAsync(captainRole);
                 }
                 catch
                 {
-                    await ReplyAsync("error, please use format !createteam nameofteam @teamcaptainofteam");
+                    await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
                 }
 
             }
@@ -128,6 +140,91 @@ namespace DiscordBotApp.Modules
 
 
         }
+
+        [Command("createteam")]
+        //can be used by admin/owner to create new team on google sheet api
+        [Summary
+      ("Create team with org")]
+        public async Task CreateTeam(string teamNameBeingCreated, string orgNameBeingCreated, IGuildUser calledUser)
+        {
+
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            ulong roleId = 705651654082560003;
+            var captainRole = Context.Guild.GetRole(roleId);
+
+            //checks if role admin or owner
+            if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
+            {
+                try
+                {
+                    await ReplyAsync($"Team {teamNameBeingCreated} created, Org {orgNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
+                    var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, default, default, false, default);
+                    await calledUser.AddRoleAsync(createdRole);
+                    await calledUser.AddRoleAsync(captainRole);
+                }
+                catch
+                {
+                    await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                }
+
+            }
+            else
+            {
+                await ReplyAsync("You are not owner/admin");
+            }
+
+
+        }
+
+        [Command("checkperms")]
+        public async Task checkPerms(IRole roleName)
+        {
+
+           
+
+            var roles = roleName.Permissions.ToString();
+
+            
+                await ReplyAsync(roles);
+            
+
+
+        }
         
+        [Command("checkcatid")]
+        public async Task checkcatid(IGuildChannel id)
+        {
+
+
+
+            var guildchannelID = id.GuildId.ToString();
+
+
+            await ReplyAsync(guildchannelID);
+
+
+
+        }
+
+       /* [Command("checkValue")]
+        public async Task checkDeny(IGuildChannel id)
+        {
+
+
+
+           // var denyValue = new OverwritePermissions.
+
+            var allowValue = id.AllowValue.ToString();
+
+
+            await ReplyAsync("this is denyvalue" + denyValue);
+
+            await ReplyAsync("this is approvevalue" + allowValue);
+
+
+
+        }*/
     }
 }
