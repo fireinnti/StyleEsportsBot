@@ -352,3 +352,6 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 DiscordBotApp/App.config
+DiscordBotApp/credentials.json
+DiscordBotApp\bin\Debug\netcoreapp3.1/token.json
+DiscordBotApp\bin\Debug\netcoreapp3.1/credentials.json
