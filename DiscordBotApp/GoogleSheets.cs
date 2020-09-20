@@ -88,6 +88,68 @@ namespace DiscordBotApp
                 }
                 Console.Read();
             }
+
+
+           
+
+            public void createTeam( string teamName )
+            {
+                Console.WriteLine("made it into createteam");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // Define request parameters.
+
+                String range = teamName;
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                // Prints the names and igns in spreadsheet:
+
+               // ValueRange response = request.Execute();
+                SheetProperties response = request.Execute();
+                IList<IList<Object>> values = response.Values;
+
+                if (values != null && values.Count > 0)
+                {
+                    Console.WriteLine("Role, In Game Name");
+                    string[,] teamArray = new string[5, 2];
+                   
+                    Console.WriteLine()
+                }
+                else
+                {
+                    Console.WriteLine("No data found.");
+                    
+                }
+                Console.Read();
+            }
         }
+    }
     }
 }

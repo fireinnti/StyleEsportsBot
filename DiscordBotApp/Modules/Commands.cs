@@ -8,6 +8,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
+using Discord.Rest;
+
+
+/*surround every command
+ *  var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin)){
+*/
 
 namespace DiscordBotApp.Modules
 {
@@ -18,17 +26,22 @@ namespace DiscordBotApp.Modules
 
         public async Task Ping(string teamnamess)
         {
-            string[,] teamArray = new string[5, 2];
-
-            var google = new googleSheet();
-            IList<IList<Object>> values = google.Google();
-            //Console.WriteLine("am I in here?" + google.Google());
-            foreach (var row in values)
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
             {
-                await ReplyAsync($"{row[0]}, {row[1]}");
-            }
+                string[,] teamArray = new string[5, 2];
 
-            // await ReplyAsync("recieved"); 
+                var google = new googleSheet();
+                IList<IList<Object>> values = google.Google();
+                //Console.WriteLine("am I in here?" + google.Google());
+                foreach (var row in values)
+                {
+                    await ReplyAsync($"{row[0]}, {row[1]}");
+                }
+
+                // await ReplyAsync("recieved"); 
+            }
         }
 
 
@@ -49,20 +62,25 @@ namespace DiscordBotApp.Modules
             var userAvatarUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
             await textChannel.SendMessageAsync(userAvatarUrl);
         }*/
-        public async Task MessageUserAsync(IUser user)
+public async Task MessageUserAsync(IUser user)
         {
-            var channel = await user.GetOrCreateDMChannelAsync();
-            try
+            var admin = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (admin.Roles.Contains(rolePermissionAdmin))
             {
-                if (user.Username == "Innti Health")
+                var channel = await user.GetOrCreateDMChannelAsync();
+                try
                 {
-                    await channel.SendMessageAsync("fuck you bro");
+                    if (user.Username == "Innti Health")
+                    {
+                        await channel.SendMessageAsync("fuck you bro");
+                    }
+                    await channel.SendMessageAsync($"Awesome stuff! {user.Username}");
                 }
-                await channel.SendMessageAsync($"Awesome stuff! {user.Username}");
-            }
-            catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
-            {
-                Console.WriteLine($"Boo, I cannot message {user}.");
+                catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                {
+                    Console.WriteLine($"Boo, I cannot message {user}.");
+                }
             }
         }
         [Command("match")]
@@ -70,19 +88,24 @@ namespace DiscordBotApp.Modules
         public async Task CheckMatchDetails(string team1, string team2, string date, string time)
         {
             var user = Context.User as SocketGuildUser;
-            var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
-            if (user.Roles.Contains(roleOfUser))
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
             {
+                
+                var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                if (user.Roles.Contains(roleOfUser))
+                {
 
-                await ReplyAsync($"Logged {team1} vs {team2} on {date} {time}");
+                    await ReplyAsync($"Logged {team1} vs {team2} on {date} {time}");
+
+                }
+                else
+                {
+                    await ReplyAsync("You are not a captain");
+                }
+
 
             }
-            else
-            {
-                await ReplyAsync("You are not a captain");
-            }
-
-
         }
 
         /* [Command("updateroster")]
@@ -100,45 +123,72 @@ namespace DiscordBotApp.Modules
       ("Create team with no org")]
         public async Task CreateTeam(string teamNameBeingCreated, IGuildUser calledUser)
         {
-
+           
             var user = Context.User as SocketGuildUser;
-            var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            ulong roleId = 705651654082560003;
-            var captainRole = Context.Guild.GetRole(roleId);
+            if (user.Roles.Contains(rolePermissionAdmin)){
+               
+                var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+                
+                //captainroleid
+                ulong roleId = 705651654082560003;
+                var captainRole = Context.Guild.GetRole(roleId);
+                //botid
 
-            //checks if role admin or owner
-            if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
-            {
-                try
+
+                //checks if role admin or owner
+                if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
                 {
-                    await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
-                    var permissions = new GuildPermissions(0);
-                    ulong permissionsForce = 104193601;
-                    var addPermissions = new OverwritePermissions(permissionsForce, default);
-                    ulong assignChannelIdTeamText = 705651659736350732;
-                    ulong assignChannelIdTeamVoice = 705651662261321783;
-                    
-                    var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
-                    var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
-                   
-                    var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
-                    await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                    await calledUser.AddRoleAsync(createdRole);
-                    await calledUser.AddRoleAsync(captainRole);
+                    try
+                    {
+
+
+                        await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
+                        var permissions = new GuildPermissions(104324673);
+
+                        var addPermissions = new OverwritePermissions(104324673, 0);
+
+                        ulong assignChannelIdTeamText = 705651659736350732;
+
+                        ulong assignChannelIdTeamVoice = 705651662261321783;
+                        Console.WriteLine("before text creation");
+                        var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                        var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
+                        Console.WriteLine("beforeassigning role");
+                        var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
+                        //var everyoneRole = Context.Guild.GetRole(705651653323522121);
+                        //var everyoneRestRole = everyoneRole as RestRole;
+                        Console.WriteLine("before addpermissions text");
+                        
+
+                        await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                        Console.WriteLine("before addpermissions voice");
+                        await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                        Console.WriteLine("before apply permissions to everyone");
+                        
+                        await calledUser.AddRoleAsync(createdRole);
+                        await calledUser.AddRoleAsync(captainRole);
+                        Console.WriteLine("after addpermissions");
+
+                        var google = new googleSheet();
+                        IList<IList<Object>> values = google.Google();
+
+
+                    }
+                    catch
+                    {
+                        await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                    }
+
                 }
-                catch
+                else
                 {
-                    await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                    await ReplyAsync("You are not owner/admin");
                 }
+
 
             }
-            else
-            {
-                await ReplyAsync("You are not owner/admin");
-            }
-
-
+           
         }
 
         [Command("createteam")]
@@ -147,49 +197,56 @@ namespace DiscordBotApp.Modules
       ("Create team with org")]
         public async Task CreateTeam(string teamNameBeingCreated, string orgNameBeingCreated, IGuildUser calledUser)
         {
-
             var user = Context.User as SocketGuildUser;
-            var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            ulong roleId = 705651654082560003;
-            var captainRole = Context.Guild.GetRole(roleId);
-
-            //checks if role admin or owner
-            if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
+            if (user.Roles.Contains(rolePermissionAdmin))
             {
-                try
+               
+                var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+                
+                ulong roleId = 705651654082560003;
+                var captainRole = Context.Guild.GetRole(roleId);
+
+                //checks if role admin or owner
+                if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
                 {
-                    await ReplyAsync($"Team {teamNameBeingCreated} created, Org {orgNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
-                    var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, default, default, false, default);
-                    await calledUser.AddRoleAsync(createdRole);
-                    await calledUser.AddRoleAsync(captainRole);
+                    try
+                    {
+                        await ReplyAsync($"Team {teamNameBeingCreated} created, Org {orgNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
+                        var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, default, default, false, default);
+                        await calledUser.AddRoleAsync(createdRole);
+                        await calledUser.AddRoleAsync(captainRole);
+                    }
+                    catch
+                    {
+                        await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                    }
+
                 }
-                catch
+                else
                 {
-                    await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                    await ReplyAsync("You are not owner/admin");
                 }
+
 
             }
-            else
-            {
-                await ReplyAsync("You are not owner/admin");
-            }
-
-
         }
 
         [Command("checkperms")]
         public async Task checkPerms(IRole roleName)
         {
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
 
-           
 
-            var roles = roleName.Permissions.ToString();
+                var roles = roleName.Permissions.ToString();
 
-            
+
                 await ReplyAsync(roles);
-            
 
+            }
 
         }
         
@@ -197,15 +254,18 @@ namespace DiscordBotApp.Modules
         public async Task checkcatid(IGuildChannel id)
         {
 
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+
+                var guildchannelID = id.GuildId.ToString();
 
 
-            var guildchannelID = id.GuildId.ToString();
+                await ReplyAsync(guildchannelID);
 
 
-            await ReplyAsync(guildchannelID);
-
-
-
+            }
         }
 
        /* [Command("checkValue")]
