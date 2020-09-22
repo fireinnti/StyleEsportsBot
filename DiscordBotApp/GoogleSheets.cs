@@ -19,10 +19,10 @@ namespace DiscordBotApp
 
             // If modifying these scopes, delete your previously saved credentials
             // at ~/.credentials/sheets.googleapis.com-dotnet-quickstart.json
-            static string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
+            static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 
-            public IList<IList<Object>> Google()
+            public IList<IList<Object>> Google( string teamName)
             {
                 Console.WriteLine("made it");
                 UserCredential credential;
@@ -55,44 +55,48 @@ namespace DiscordBotApp
 
                 // Define request parameters.
 
-                String range = "The Syndicate!A2:B";
+                String range = $"{teamName}!A2:C7";
                 SpreadsheetsResource.ValuesResource.GetRequest request =
                         service.Spreadsheets.Values.Get(googleSheetUrl, range);
 
                 // Prints the names and igns in spreadsheet:
-
-                ValueRange response = request.Execute();
-                IList<IList<Object>> values = response.Values;
-
-                if (values != null && values.Count > 0)
+                try
                 {
-                    Console.WriteLine("Role, In Game Name");
-                    string[,] teamArray = new string[5, 2];
-                    foreach (var row in values)
-                    {
-                        int num = 0;
-                        // Print columns A and E, which correspond to indices 0 and 4.
-                        Console.WriteLine("{0}, {1}", row[0], row[1]);
-                        teamArray[num, 0] = row[0].ToString();
-                        num++;
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
 
+                    if (values != null && values.Count > 0)
+                    {
+                        Console.WriteLine("Role, In Game Name");
+                        string[,] teamArray = new string[6, 3];
+                        foreach (var row in values)
+                        {
+                            int num = 0;
+                            // Print columns A and E, which correspond to indices 0 and 4.
+                            Console.WriteLine("{0}, {1}", row[0], row[1]);
+                            teamArray[num, 0] = row[0].ToString();
+                            num++;
+                            
+
+                        }
+                        Console.WriteLine("sending" + values);
+                        Console.WriteLine(teamArray[0, 0]);
+                        return response.Values;
                     }
-                    Console.WriteLine("sending" + values);
-                    Console.WriteLine(teamArray[0, 0]);
-                    return response.Values;
                 }
-                else
+                catch
                 {
                     Console.WriteLine("No data found.");
                     return null;
                 }
+                return null;
                 Console.Read();
             }
 
 
            
 
-            public void createTeam( string teamName )
+            public string CreateTeam()
             {
                 Console.WriteLine("made it into createteam");
                 UserCredential credential;
@@ -125,31 +129,34 @@ namespace DiscordBotApp
 
                 // Define request parameters.
 
-                String range = teamName;
-                SpreadsheetsResource.ValuesResource.GetRequest request =
-                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+                //String range = teamName;
+                var responseOfTeam = service.Spreadsheets.Get(googleSheetUrl);
+                //Spreadsheet responsePlz =  service.Spreadsheets().Get(googleSheetUrl);
+
 
                 // Prints the names and igns in spreadsheet:
 
-               // ValueRange response = request.Execute();
-                SheetProperties response = request.Execute();
-                IList<IList<Object>> values = response.Values;
+                // ValueRange response = request.Execute();
+                Spreadsheet response = responseOfTeam.Execute();
+                List<string> values = new List<string>();
 
-                if (values != null && values.Count > 0)
+                foreach (Sheet sheet in response.Sheets)
                 {
-                    Console.WriteLine("Role, In Game Name");
-                    string[,] teamArray = new string[5, 2];
-                   
-                    Console.WriteLine()
+
+                    values.Add(sheet.Properties.Title);
+                    Console.WriteLine("How often" + sheet.Properties.Title);
+                    
+                    return values.ToString();
                 }
-                else
+                return null;
+               /* else
                 {
                     Console.WriteLine("No data found.");
                     
-                }
-                Console.Read();
+                }*/
+               // Console.Read();
             }
         }
     }
     }
-}
+

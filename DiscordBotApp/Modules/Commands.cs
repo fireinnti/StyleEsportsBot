@@ -24,23 +24,57 @@ namespace DiscordBotApp.Modules
     {
         [Command("teamroster")]
 
-        public async Task Ping(string teamnamess)
+        public async Task Ping(IRole teamName)
         {
+            Console.WriteLine("made it in command" + Context.User);
+
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             if (user.Roles.Contains(rolePermissionAdmin))
             {
-                string[,] teamArray = new string[5, 2];
-
-                var google = new googleSheet();
-                IList<IList<Object>> values = google.Google();
+                  string[,] teamArray = new string[6, 3];
+                  var teamNameWithoutNumber = teamName.Name;
+                  var google = new googleSheet();
+                  IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
-                foreach (var row in values)
+                if (values == null)
                 {
-                    await ReplyAsync($"{row[0]}, {row[1]}");
+                    await ReplyAsync("role does not match a team in google sheets roster");
                 }
+                else
+                {
+                    foreach (var row in values)
+                    {
+                        await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+                    }
+                }
+            }
+        }
 
-                // await ReplyAsync("recieved"); 
+        [Command("teamrostercheck")]
+
+        public async Task teamCheck()
+        {
+            Console.WriteLine("made it in command" + Context.User);
+
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                /*  string[,] teamArray = new string[5, 2];
+
+                  var google = new googleSheet();
+                  IList<IList<Object>> values = google.Google();
+                  //Console.WriteLine("am I in here?" + google.Google());
+                  foreach (var row in values)
+                  {
+                      await ReplyAsync($"{row[0]}, {row[1]}");
+                  }
+                */
+                Console.WriteLine("made it");
+                var google = new googleSheet();
+                var run = google.CreateTeam();
+                await ReplyAsync("recieved");
             }
         }
 
@@ -170,8 +204,8 @@ public async Task MessageUserAsync(IUser user)
                         await calledUser.AddRoleAsync(captainRole);
                         Console.WriteLine("after addpermissions");
 
-                        var google = new googleSheet();
-                        IList<IList<Object>> values = google.Google();
+                     //   var google = new googleSheet();
+                       // IList<IList<Object>> values = google.Google();
 
 
                     }
