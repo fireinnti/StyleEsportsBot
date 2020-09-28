@@ -22,6 +22,37 @@ namespace DiscordBotApp.Modules
     using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
     public class Commands : ModuleBase<SocketCommandContext>
     {
+        [Command("msg")]
+        public async Task Msg(IRole role, [Remainder]string message)
+        {
+            var admin = Context.User as SocketGuildUser;
+            var roleName = role.ToString();
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+
+            
+
+            var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (admin.Roles.Contains(rolePermissionAdmin))
+            {
+
+
+                foreach (var user in listOfUsers)
+                {
+                    try
+                    {
+                        var channel = await user.GetOrCreateDMChannelAsync();
+                        
+                        await channel.SendMessageAsync($"Hello, this is a test for mass dms, {user.Username}. " + message);
+                    }
+
+                    catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                    {
+                        Console.WriteLine($"Boo, I cannot message {user}.");
+                    }
+                }
+            }
+        }
         [Command("teamroster")]
 
         public async Task Ping(IRole teamName)
