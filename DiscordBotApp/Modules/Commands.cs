@@ -43,12 +43,14 @@ namespace DiscordBotApp.Modules
                     {
                         var channel = await user.GetOrCreateDMChannelAsync();
                         
-                        await channel.SendMessageAsync($"Hello, this is a test for mass dms, {user.Username}. " + message);
+                        await channel.SendMessageAsync($"Hello, {user.Username}! " + message);
                     }
 
                     catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
                     {
                         Console.WriteLine($"Boo, I cannot message {user}.");
+                        await ReplyAsync($"I cannot message {user}");
+                        continue;
                     }
                 }
             }
@@ -82,9 +84,9 @@ namespace DiscordBotApp.Modules
             }
         }
 
-        [Command("teamrostercheck")]
+        [Command("creategooglesheet")]
 
-        public async Task teamCheck()
+        public async Task createGoogleSheet()
         {
             Console.WriteLine("made it in command" + Context.User);
 
@@ -104,7 +106,7 @@ namespace DiscordBotApp.Modules
                 */
                 Console.WriteLine("made it");
                 var google = new googleSheet();
-                var run = google.CreateTeam();
+               // var run = google.CreateTeam();
                 await ReplyAsync("recieved");
             }
         }
@@ -186,7 +188,7 @@ public async Task MessageUserAsync(IUser user)
         //can be used by admin/owner to create new team on google sheet api
         [Summary
       ("Create team with no org")]
-        public async Task CreateTeam(string teamNameBeingCreated, IGuildUser calledUser)
+        public async Task CreateTeam(IGuildUser calledUser, [Remainder] string teamNameBeingCreated)
         {
            
             var user = Context.User as SocketGuildUser;
@@ -194,9 +196,11 @@ public async Task MessageUserAsync(IUser user)
             if (user.Roles.Contains(rolePermissionAdmin)){
                
                 var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
-                
+
                 //captainroleid
-                ulong roleId = 705651654082560003;
+                // style server 609893180019834880
+                //copy of style server 705651654082560003
+                ulong roleId = 609893180019834880;
                 var captainRole = Context.Guild.GetRole(roleId);
                 //botid
 
@@ -212,10 +216,15 @@ public async Task MessageUserAsync(IUser user)
                         var permissions = new GuildPermissions(104324673);
 
                         var addPermissions = new OverwritePermissions(104324673, 0);
+                        var zeroPerms = new OverwritePermissions(0, 104324673);
+                        //style text id622919737365495849
+                        //copy of style text id 705651659736350732
+                        ulong assignChannelIdTeamText = 622919737365495849;
 
-                        ulong assignChannelIdTeamText = 705651659736350732;
 
-                        ulong assignChannelIdTeamVoice = 705651662261321783;
+                        //style voice id 622919840444841984
+                        //copy of style voice id 705651662261321783
+                        ulong assignChannelIdTeamVoice = 622919840444841984;
                         Console.WriteLine("before text creation");
                         var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
                         var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
@@ -224,19 +233,26 @@ public async Task MessageUserAsync(IUser user)
                         //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                         //var everyoneRestRole = everyoneRole as RestRole;
                         Console.WriteLine("before addpermissions text");
-                        
+
+
+                        //everyone role
+                        var everyone = Context.Guild.GetRole(601677722577797120);
 
                         await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                        await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
                         Console.WriteLine("before addpermissions voice");
                         await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                        await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
                         Console.WriteLine("before apply permissions to everyone");
                         
                         await calledUser.AddRoleAsync(createdRole);
                         await calledUser.AddRoleAsync(captainRole);
                         Console.WriteLine("after addpermissions");
+                        var google = new googleSheet();
+                        var run = google.CreateTeam(teamNameBeingCreated);
 
-                     //   var google = new googleSheet();
-                       // IList<IList<Object>> values = google.Google();
+                        //   var google = new googleSheet();
+                        // IList<IList<Object>> values = google.Google();
 
 
                     }

@@ -1,4 +1,5 @@
 ﻿using System.Configuration;
+using Newtonsoft.Json;
 using System.Collections.Specialized;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Sheets.v4;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Linq;
 
 namespace DiscordBotApp
 {
@@ -90,13 +92,13 @@ namespace DiscordBotApp
                     return null;
                 }
                 return null;
-                Console.Read();
+                
             }
 
 
            
 
-            public string CreateTeam()
+            public string CreateTeam(string teamName)
             {
                 Console.WriteLine("made it into createteam");
                 UserCredential credential;
@@ -136,18 +138,61 @@ namespace DiscordBotApp
 
                 // Prints the names and igns in spreadsheet:
 
-                // ValueRange response = request.Execute();
-                Spreadsheet response = responseOfTeam.Execute();
-                List<string> values = new List<string>();
+                // The ID of the spreadsheet containing the sheet to copy.
+                 // TODO: Update placeholder value.
 
-                foreach (Sheet sheet in response.Sheets)
+
+                // The ID of the sheet to copy.
+                //guid in url
+               // int sheetId = 1048358764;  
+
+                // The ID of the spreadsheet to copy the sheet to.
+                string destinationSpreadsheetId = googleSheetUrl;  // TODO: Update placeholder value.
+
+                // TODO: Assign values to desired properties of `requestBody`:
+
+
+
+                //CopySheetToAnotherSpreadsheetRequest requestBody = new CopySheetToAnotherSpreadsheetRequest();
+                //requestBody.DestinationSpreadsheetId = destinationSpreadsheetId;
+
+                //SpreadsheetsResource.SheetsResource.CopyToRequest request = service.Spreadsheets.Sheets.CopyTo(requestBody, googleSheetUrl, sheetId);
+
+                
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+              // request.
+                
+                //SheetProperties response = request.Execute();
+                var masterSheet = service.Spreadsheets.Get(googleSheetUrl).Execute().Sheets.First(x => x.Properties.Title.Equals("Master"));
+                var newSheet = new Request
                 {
+                    DuplicateSheet = new DuplicateSheetRequest
+                    {
+                        SourceSheetId = masterSheet.Properties.SheetId,
+                        NewSheetName = teamName,
+                        InsertSheetIndex = 7
+                       
 
-                    values.Add(sheet.Properties.Title);
-                    Console.WriteLine("How often" + sheet.Properties.Title);
-                    
-                    return values.ToString();
-                }
+                    }
+                };
+                var updater = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { newSheet } };
+                service.Spreadsheets.BatchUpdate(updater, googleSheetUrl).Execute();
+                
+                //Console.WriteLine(JsonConvert.SerializeObject(response));
+
+
+                // var requestNewSheetUpdate = new UpdateSheetPropertiesRequest();
+
+
+                //SpreadsheetsResource.ValuesResource.UpdateRequest requestUpdate = service.Spreadsheets.Values.Update(requestBody, googleSheetUrl, response.Title);
+                // response.Title.Equals("SuperTesty");
+
+                // Data.SheetProperties response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                // Console.WriteLine(JsonConvert.SerializeObject(response));
+
                 return null;
                /* else
                 {
