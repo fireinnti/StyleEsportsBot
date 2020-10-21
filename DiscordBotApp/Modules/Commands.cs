@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using Discord.Rest;
+using System.Web;
 
 
 /*surround every command
@@ -29,21 +30,22 @@ namespace DiscordBotApp.Modules
             var roleName = role.ToString();
             //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
             var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
-
-            
+            Console.Write("before checking admin");
+            Console.WriteLine("list of users " + listOfUsers);
 
             var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             if (admin.Roles.Contains(rolePermissionAdmin))
             {
-
+                Console.Write("is admin");
 
                 foreach (var user in listOfUsers)
                 {
+                    Console.WriteLine("in for each" + user);
                     try
                     {
-                        var channel = await user.GetOrCreateDMChannelAsync();
+                        var channelb = await user.GetOrCreateDMChannelAsync();
                         
-                        await channel.SendMessageAsync($"Hello, {user.Username}! " + message);
+                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
                     }
 
                     catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
@@ -62,12 +64,13 @@ namespace DiscordBotApp.Modules
             Console.WriteLine("made it in command" + Context.User);
 
             var user = Context.User as SocketGuildUser;
-            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            if (user.Roles.Contains(rolePermissionAdmin))
+            //var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            //if (user.Roles.Contains(rolePermissionAdmin))
             {
                   string[,] teamArray = new string[6, 3];
                   var teamNameWithoutNumber = teamName.Name;
                   var google = new googleSheet();
+                  string stringOfIgns = null;
                   IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
@@ -79,9 +82,18 @@ namespace DiscordBotApp.Modules
                     foreach (var row in values)
                     {
                         await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+                        stringOfIgns = stringOfIgns + row[1] + ",";
                     }
+
+
+                    await ReplyAsync("https://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns));
+                    await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
                 }
             }
+            /*else
+            {
+                await ReplyAsync("You do not have permission to use this command");
+            }*/
         }
 
         [Command("creategooglesheet")]
@@ -216,8 +228,10 @@ public async Task MessageUserAsync(IUser user)
                         var permissions = new GuildPermissions(104324673);
 
                         var addPermissions = new OverwritePermissions(104324673, 0);
-                        var zeroPerms = new OverwritePermissions(0, 104324673);
-                        //style text id622919737365495849
+                        var zeroPerms = new OverwritePermissions(0, 104193601);
+                        var zeroPermsVoice = new OverwritePermissions(000000400, 121100000);
+                        //old zero perms
+                        //style text id622919737365495849 
                         //copy of style text id 705651659736350732
                         ulong assignChannelIdTeamText = 622919737365495849;
 
@@ -242,7 +256,7 @@ public async Task MessageUserAsync(IUser user)
                         await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
                         Console.WriteLine("before addpermissions voice");
                         await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                        await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
+                        await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
                         Console.WriteLine("before apply permissions to everyone");
                         
                         await calledUser.AddRoleAsync(createdRole);
@@ -323,6 +337,7 @@ public async Task MessageUserAsync(IUser user)
 
 
                 var roles = roleName.Permissions.ToString();
+               
 
 
                 await ReplyAsync(roles);

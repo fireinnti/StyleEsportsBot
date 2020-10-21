@@ -57,7 +57,7 @@ namespace DiscordBotApp
 
                 // Define request parameters.
 
-                String range = $"{teamName}!A2:C7";
+                String range = $"{teamName}!A2:C6";
                 SpreadsheetsResource.ValuesResource.GetRequest request =
                         service.Spreadsheets.Values.Get(googleSheetUrl, range);
 
@@ -70,7 +70,7 @@ namespace DiscordBotApp
                     if (values != null && values.Count > 0)
                     {
                         Console.WriteLine("Role, In Game Name");
-                        string[,] teamArray = new string[6, 3];
+                        string[,] teamArray = new string[5, 3];
                         foreach (var row in values)
                         {
                             int num = 0;
