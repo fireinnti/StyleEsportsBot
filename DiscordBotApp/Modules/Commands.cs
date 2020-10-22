@@ -26,6 +26,10 @@ namespace DiscordBotApp.Modules
         [Command("msg")]
         public async Task Msg(IRole role, [Remainder]string message)
         {
+            //logging purposes
+            var channel = Context.Guild as SocketGuild;
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+
             var admin = Context.User as SocketGuildUser;
             var roleName = role.ToString();
             //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
@@ -46,6 +50,7 @@ namespace DiscordBotApp.Modules
                         var channelb = await user.GetOrCreateDMChannelAsync();
                         
                         await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
+                        await Task.Delay(1000);
                     }
 
                     catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
@@ -61,7 +66,12 @@ namespace DiscordBotApp.Modules
 
         public async Task Ping(IRole teamName)
         {
-            Console.WriteLine("made it in command" + Context.User);
+            
+            //channel id of logs 767455535800385616
+            //sending info to log
+            var channel = Context.Guild as SocketGuild;
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the teamroster command for " + teamName);
+           
 
             var user = Context.User as SocketGuildUser;
             //var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -83,11 +93,14 @@ namespace DiscordBotApp.Modules
                     {
                         await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
                         stringOfIgns = stringOfIgns + row[1] + ",";
+                        await Task.Delay(1000);
                     }
 
 
                     await ReplyAsync("https://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns));
                     await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
+
+
                 }
             }
             /*else
