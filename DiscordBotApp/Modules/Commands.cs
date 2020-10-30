@@ -81,6 +81,7 @@ namespace DiscordBotApp.Modules
                   var teamNameWithoutNumber = teamName.Name;
                   var google = new googleSheet();
                   string stringOfIgns = null;
+                  string oneMessage = null;
                   IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
@@ -91,14 +92,15 @@ namespace DiscordBotApp.Modules
                 {
                     foreach (var row in values)
                     {
-                        await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+                        //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+                        oneMessage = oneMessage + ($"{row[0]}, {row[1]}, {row[2]}\n");
                         stringOfIgns = stringOfIgns + row[1] + ",";
-                        await Task.Delay(1000);
+                        
                     }
 
 
-                    await ReplyAsync("https://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns));
-                    await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
+                    await ReplyAsync(oneMessage + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf there are not 5 IGNs, please contact Admins.");
+                   // await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
 
 
                 }
@@ -275,6 +277,7 @@ public async Task MessageUserAsync(IUser user)
                         await calledUser.AddRoleAsync(createdRole);
                         await calledUser.AddRoleAsync(captainRole);
                         Console.WriteLine("after addpermissions");
+
                         var google = new googleSheet();
                         var run = google.CreateTeam(teamNameBeingCreated);
 
