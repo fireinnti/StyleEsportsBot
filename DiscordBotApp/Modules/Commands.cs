@@ -242,9 +242,9 @@ public async Task MessageUserAsync(IUser user)
                         await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
                         var permissions = new GuildPermissions(104324673);
 
-                        var addPermissions = new OverwritePermissions(104324673, 0);
-                        var zeroPerms = new OverwritePermissions(0, 104193601);
-                        var zeroPermsVoice = new OverwritePermissions(000000400, 121100000);
+                        var addPermissions = new OverwritePermissions(70770240, 0);
+                      //  var zeroPerms = new OverwritePermissions(0, 104193601);
+                     //   var zeroPermsVoice = new OverwritePermissions(000000400, 121100000);
                         //old zero perms
                         //style text id622919737365495849 
                         //copy of style text id 705651659736350732
@@ -268,10 +268,10 @@ public async Task MessageUserAsync(IUser user)
                         var everyone = Context.Guild.GetRole(601677722577797120);
 
                         await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                        await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
+                       // await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
                         Console.WriteLine("before addpermissions voice");
                         await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                        await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
+                       // await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
                         Console.WriteLine("before apply permissions to everyone");
                         
                         await calledUser.AddRoleAsync(createdRole);

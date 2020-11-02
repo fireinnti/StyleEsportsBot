@@ -171,7 +171,7 @@ namespace DiscordBotApp
                     {
                         SourceSheetId = masterSheet.Properties.SheetId,
                         NewSheetName = teamName,
-                        InsertSheetIndex = 7
+                        InsertSheetIndex = 8
                        
 
                     }
