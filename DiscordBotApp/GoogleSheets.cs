@@ -97,7 +97,7 @@ namespace DiscordBotApp
 
 
            
-
+            //creates team
             public string CreateTeam(string teamName)
             {
                 Console.WriteLine("made it into createteam");

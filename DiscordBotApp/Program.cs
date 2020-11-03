@@ -7,6 +7,7 @@ using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using Discord.Addons.Interactive;
 
 namespace DiscordBotApp
 {
@@ -42,6 +43,7 @@ namespace DiscordBotApp
             _services = new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
+                .AddSingleton<InteractiveService>()
                 .BuildServiceProvider();
             string discordToken;
             discordToken = ConfigurationManager.AppSettings.Get("discordToken");

@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using System;
@@ -12,6 +13,7 @@ using Discord.Rest;
 using System.Web;
 
 
+
 /*surround every command
  *  var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -21,7 +23,7 @@ using System.Web;
 namespace DiscordBotApp.Modules
 {
     using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
-    public class Commands : ModuleBase<SocketCommandContext>
+    public class Commands : InteractiveBase
     {
         [Command("msg")]
         public async Task Msg(IRole role, [Remainder]string message)
@@ -211,7 +213,7 @@ public async Task MessageUserAsync(IUser user)
 
          }*/
 
-        [Command("createteam")]
+        [Command("createteam", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
         [Summary
       ("Create team with no org")]
@@ -278,9 +280,19 @@ public async Task MessageUserAsync(IUser user)
                         await calledUser.AddRoleAsync(captainRole);
                         Console.WriteLine("after addpermissions");
 
-                        var google = new googleSheet();
-                        var run = google.CreateTeam(teamNameBeingCreated);
 
+                        await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
+                        var response = await NextMessageAsync();
+                        if (response.ToString() == "yes")
+                        {
+                            var google = new googleSheet();
+                            var run = google.CreateTeam(teamNameBeingCreated);
+                            await ReplyAsync("Google sheet created");
+                        }
+                        else if(response.ToString() == "no")
+                        {
+                            await ReplyAsync("No google sheet created.");
+                        }
                         //   var google = new googleSheet();
                         // IList<IList<Object>> values = google.Google();
 
