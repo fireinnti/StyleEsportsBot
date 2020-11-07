@@ -53,7 +53,7 @@ namespace DiscordBotApp.Modules
                         var channelb = await user.GetOrCreateDMChannelAsync();
                         
                         await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
-                        await Task.Delay(1000);
+                        await Task.Delay(3000);
                     }
 
                     catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
@@ -63,6 +63,41 @@ namespace DiscordBotApp.Modules
                         continue;
                     }
                 }
+            }
+        }
+        [Command("msg")]
+        public async Task MsgUser(IUser user, [Remainder] string message)
+        {
+            //logging purposes
+            var channel = Context.Guild as SocketGuild;
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command to " + user);
+
+            var admin = Context.User as SocketGuildUser;
+            
+            Console.Write("before checking admin");
+            
+
+            var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (admin.Roles.Contains(rolePermissionAdmin))
+            {
+                Console.Write("is admin");
+
+
+                try
+                {
+                    var channelb = await user.GetOrCreateDMChannelAsync();
+
+                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
+                    await Task.Delay(3000);
+                }
+
+                catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                {
+                    Console.WriteLine($"Boo, I cannot message {user}.");
+                    await ReplyAsync($"I cannot message {user}");
+
+                }
+
             }
         }
         [Command("teamroster")]
@@ -138,6 +173,78 @@ namespace DiscordBotApp.Modules
                 var google = new googleSheet();
                // var run = google.CreateTeam();
                 await ReplyAsync("recieved");
+            }
+        }
+
+
+        [Command("purge")]
+        [Alias("clean")]
+        [Summary("Downloads and removes X messages from the current channel.")]
+        
+        public async Task PurgeAsync(int amount)
+        {
+            var channel = Context.Guild as SocketGuild;
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the clean command");
+
+            var admin = Context.User as SocketGuildUser;
+           
+            
+
+            var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            var currentChannel = Context.Channel.Id;
+            ulong botChannel = 774501395566297138;
+            ulong adminBotChannel = 757377449016295527;
+
+            if (currentChannel == botChannel || currentChannel == adminBotChannel)
+            {
+                if (admin.Roles.Contains(rolePermissionAdmin))
+                {
+                    // Check if the amount provided by the user is positive.
+                    if (amount <= 0)
+                    {
+                        await ReplyAsync("The amount of messages to remove must be positive.");
+                        return;
+                    }
+
+                    // Download X messages starting from Context.Message, which means
+                    // that it won't delete the message used to invoke this command.
+                    var messages = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, amount).FlattenAsync();
+
+                    // Note:
+                    // FlattenAsync() might show up as a compiler error, because it's
+                    // named differently on stable and nightly versions of Discord.Net.
+                    // - Discord.Net 1.x: Flatten()
+                    // - Discord.Net 2.x: FlattenAsync()
+
+                    // Ensure that the messages aren't older than 14 days,
+                    // because trying to bulk delete messages older than that
+                    // will result in a bad request.
+                    var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+
+                    // Get the total amount of messages.
+                    var count = filteredMessages.Count();
+
+                    // Check if there are any messages to delete.
+                    if (count == 0)
+                        await ReplyAsync("Nothing to delete.");
+
+                    else
+                    {
+                        // The cast here isn't needed if you're using Discord.Net 1.x,
+                        // but I'd recommend leaving it as it's what's required on 2.x, so
+                        // if you decide to update you won't have to change this line.
+                        await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
+                        await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
+                    }
+                }
+                else
+                {
+                    await ReplyAndDeleteAsync("You are not an admin");
+                }
+            }
+            else
+            {
+                await ReplyAndDeleteAsync("This is not admin bot commands or bot commands channel");
             }
         }
 
@@ -249,9 +356,116 @@ public async Task MessageUserAsync(IUser user)
 
                             if (askIfOrg.ToString() == "yes" || askIfOrg.ToString() == "no")
                             {
-                                await ReplyAsync("Okay, what is the orgs name?");
-                                var nameOfOrg = await NextMessageAsync();
-                                if (nameOfOrg != null)
+                                if (askIfOrg.ToString() == "yes")
+                                {
+                                    await ReplyAsync("Okay, what is the orgs name?");
+                                    var nameOfOrg = await NextMessageAsync();
+                                    if (nameOfOrg != null)
+                                    {
+                                        await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
+                                        var response = await NextMessageAsync();
+                                        if (response != null)
+                                        {
+                                            if (response.ToString() == "yes" || response.ToString() == "no")
+                                            {
+                                                await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
+
+                                                var permissions = new GuildPermissions(104324673);
+
+                                                var addPermissions = new OverwritePermissions(70770240, 0);
+                                                //org category id
+                                                ulong assignChannelIdOrgText = 774102389341814794;
+
+                                                //full channel team text
+                                                // ulong assignChannelIdTeamText = 622919737365495849;
+                                                ulong assignChannelIdTeamText = 774104289919500298;
+
+
+                                                //full voice channel
+                                                //ulong assignChannelIdTeamVoice = 622919840444841984;
+                                                ulong assignChannelIdTeamVoice = 774104754938052609;
+
+                                                //create new channels and assign them under categories
+                                                var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                                                var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
+
+                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
+                                                //var everyoneRole = Context.Guild.GetRole(705651653323522121);
+                                                //var everyoneRestRole = everyoneRole as RestRole;
+                                                Console.WriteLine("before addpermissions text");
+
+
+                                                //everyone role
+                                                var everyone = Context.Guild.GetRole(601677722577797120);
+
+                                                await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                // await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
+                                                Console.WriteLine("before addpermissions voice");
+                                                await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                // await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
+                                                Console.WriteLine("before apply permissions to everyone");
+
+
+                                                //asks if org and creates seperate text channel
+
+
+
+                                                if (askIfOrg.ToString() == "yes")
+                                                {
+
+                                                    var createOrgTextChannel = await Context.Guild.CreateTextChannelAsync(nameOfOrg.ToString(), channel => channel.CategoryId = assignChannelIdOrgText, default);
+                                                    await createOrgTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                }
+                                                else if (askIfOrg.ToString() == "no")
+                                                {
+                                                    await ReplyAsync("Okay, this is not an org.");
+                                                }
+
+
+
+
+
+                                                await calledUser.AddRoleAsync(createdRole);
+                                                await calledUser.AddRoleAsync(captainRole);
+                                                Console.WriteLine("after addpermissions");
+
+
+
+                                                if (response.ToString() == "yes")
+                                                {
+                                                    var google = new googleSheet();
+                                                    var run = google.CreateTeam(teamNameBeingCreated);
+                                                    await ReplyAsync("Google sheet created.");
+                                                }
+                                                else if (response.ToString() == "no")
+                                                {
+                                                    await ReplyAsync("No google sheet created.");
+                                                }
+
+                                                //   var google = new googleSheet();
+                                                // IList<IList<Object>> values = google.Google();
+                                            }
+                                            else
+                                            {
+                                                await ReplyAsync("Please respond with yes or no, retry command"); return;
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            await ReplyAsync("Please respond with yes or no in 10 seconds, retry command");
+                                            return;
+
+
+                                        }
+                                    }
+
+                                    else
+                                    {
+                                        await ReplyAsync("Please name the org, retry command"); return;
+                                    }
+                                }
+                                else
                                 {
                                     await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
                                     var response = await NextMessageAsync();
@@ -264,8 +478,7 @@ public async Task MessageUserAsync(IUser user)
                                             var permissions = new GuildPermissions(104324673);
 
                                             var addPermissions = new OverwritePermissions(70770240, 0);
-                                            //org category id
-                                            ulong assignChannelIdOrgText = 774102389341814794;
+                                            
 
                                             //full channel team text
                                             // ulong assignChannelIdTeamText = 622919737365495849;
@@ -297,20 +510,11 @@ public async Task MessageUserAsync(IUser user)
                                             Console.WriteLine("before apply permissions to everyone");
 
 
-                                            //asks if org and creates seperate text channel
+                                            
 
 
 
-                                            if (askIfOrg.ToString() == "yes")
-                                            {
-
-                                                var createOrgTextChannel = await Context.Guild.CreateTextChannelAsync(nameOfOrg.ToString(), channel => channel.CategoryId = assignChannelIdOrgText, default);
-                                                await createOrgTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                                            }
-                                            else if (askIfOrg.ToString() == "no")
-                                            {
-                                                await ReplyAsync("Okay, this is not an org.");
-                                            }
+                                            
 
 
 
@@ -350,16 +554,12 @@ public async Task MessageUserAsync(IUser user)
 
                                     }
                                 }
-
-                                else
-                                {
-                                    await ReplyAsync("Please name the org, retry command"); return;
-                                }
                             }
                             else
                             {
                                 await ReplyAsync("Please respond within 10 seconds, retry command"); return;
                             }
+                            
                         }
                         else
                         {
