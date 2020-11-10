@@ -22,22 +22,30 @@ using System.Runtime.CompilerServices;
 */
 
 namespace DiscordBotApp.Modules
+
 {
+    
     using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
-    public class Commands : InteractiveBase
+
+    public class MsgModule : ModuleBase<SocketCommandContext>
     {
+
+
         [Command("msg")]
-        public async Task Msg(IRole role, [Remainder]string message)
+        public async Task Msg(IRole role, [Remainder] string message)
         {
+
             //logging purposes
             var channel = Context.Guild as SocketGuild;
             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
 
             var admin = Context.User as SocketGuildUser;
             var roleName = role.ToString();
+            Console.WriteLine(roleName);
             //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
             var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
-            Console.Write("before checking admin");
+
+
             Console.WriteLine("list of users " + listOfUsers);
 
             var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -47,13 +55,15 @@ namespace DiscordBotApp.Modules
 
                 foreach (var user in listOfUsers)
                 {
+                    
+                    await Task.Delay(3000);
                     Console.WriteLine("in for each" + user);
                     try
                     {
                         var channelb = await user.GetOrCreateDMChannelAsync();
-                        
+
                         await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
-                        await Task.Delay(3000);
+
                     }
 
                     catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
@@ -65,7 +75,8 @@ namespace DiscordBotApp.Modules
                 }
             }
         }
-        [Command("msg")]
+
+        [Command("msguser")]
         public async Task MsgUser(IUser user, [Remainder] string message)
         {
             //logging purposes
@@ -73,9 +84,9 @@ namespace DiscordBotApp.Modules
             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command to " + user);
 
             var admin = Context.User as SocketGuildUser;
-            
+
             Console.Write("before checking admin");
-            
+
 
             var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             if (admin.Roles.Contains(rolePermissionAdmin))
@@ -100,6 +111,11 @@ namespace DiscordBotApp.Modules
 
             }
         }
+    }
+    
+    public class Commands : InteractiveBase
+    {
+       
         [Command("teamroster")]
 
         public async Task Ping(IRole teamName)

@@ -29,8 +29,8 @@ namespace DiscordBotApp
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IServiceProvider _services;
-        
-        
+
+       
         public async Task MainAsync()
 		{
            
@@ -47,6 +47,13 @@ namespace DiscordBotApp
                 .BuildServiceProvider();
             string discordToken;
             discordToken = ConfigurationManager.AppSettings.Get("discordToken");
+
+            var config = new DiscordSocketConfig
+            {
+                AlwaysDownloadUsers = true,
+                MessageCacheSize = 100
+            };
+            var client = new DiscordSocketClient(config);
 
 
 
