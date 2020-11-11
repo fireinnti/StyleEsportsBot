@@ -2,10 +2,12 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Linq;
+using System.Configuration;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
@@ -26,6 +28,7 @@ namespace DiscordBotApp.Modules
 {
     
     using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
+    using riotapi = DiscordBotApp.riotApi.riot;
 
     public class MsgModule : ModuleBase<SocketCommandContext>
     {
@@ -147,7 +150,7 @@ namespace DiscordBotApp.Modules
                     foreach (var row in values)
                     {
                         //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
-                        oneMessage = oneMessage + ($"{row[0]}, {row[1]}, {row[2]}\n");
+                        oneMessage = oneMessage + ($"{row[0]}, {row[1]}\n");
                         stringOfIgns = stringOfIgns + row[1] + ",";
                         
                     }
@@ -327,7 +330,12 @@ public async Task MessageUserAsync(IUser user)
 
             }
         }
-
+        [Command("imposter")]
+        public async Task imposter(IUser user)
+        {
+            await ReplyAndDeleteAsync(user.Username + " is acting kinda sus...");
+            
+        }
         /* [Command("updateroster")]
          // updates roster, can be used by team captain
          public async Task UpdateRoster(IUser user)
@@ -598,45 +606,117 @@ public async Task MessageUserAsync(IUser user)
            
         }
 
-        [Command("createteam")]
+        [Command("addtoteam", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
         [Summary
-      ("Create team with org")]
-        public async Task CreateTeam(string teamNameBeingCreated, string orgNameBeingCreated, IGuildUser calledUser)
+       ("add to team")]
+        public async Task addToTeam(IRole team, string role, IGuildUser calledUser)
         {
+
+            var channel = Context.Guild as SocketGuild;
+            
+            //check if while loop should run
+            bool run = false;
+            
+
+            Console.WriteLine("made it into addtoteam");
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            if (user.Roles.Contains(rolePermissionAdmin))
-            {
-               
+            
+                Console.WriteLine("made it past admin");
                 var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
                 
-                ulong roleId = 705651654082560003;
-                var captainRole = Context.Guild.GetRole(roleId);
+                
+                var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
-                //checks if role admin or owner
-                if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
+            //checks if role admin or owner
+            if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(team))))
                 {
+                    if (role == "top")
+                    {
+                        Console.WriteLine("adding top");
+                        
+
+                    }
+                    else if(role == "jg")
+                    {
+                        Console.WriteLine("adding jg");
+                    }
+                    else if(role == "mid")
+                    {
+                        Console.WriteLine("adding mid");
+                    }
+                    else if(role == "adc")
+                    {
+                        Console.WriteLine("adding adc");
+                    }
+                    else if(role == "sup")
+                    {
+                        Console.WriteLine("adding sup");
+                    }
+                    else
+                    {
+                        await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup' for example !addtoteam @teamrole mid @midsdiscord");
+                        return;
+                    }
                     try
                     {
-                        await ReplyAsync($"Team {teamNameBeingCreated} created, Org {orgNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
-                        var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, default, default, false, default);
-                        await calledUser.AddRoleAsync(createdRole);
-                        await calledUser.AddRoleAsync(captainRole);
+                        while (run == false)
+                        {
+                            await ReplyAsync("What is the ign of the player?");
+                            var response = await NextMessageAsync();
+                           /* string riotkey;
+                            riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+                            
+                            WebRequest riotrequest = WebRequest.Create("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + HttpUtility.UrlEncode(response.ToString()) + "?api_key=" + riotkey);
+                            WebResponse riotresponse = riotrequest.GetResponse();
+                        //var data = JsonConvert.DeserializeObject<Dictionary<string, riotApi.riot>>(riotresponse.ToString());
+                             Console.WriteLine(((HttpWebResponse)riotresponse).StatusCode + "status discription");
+                             //Console.WriteLine(JsonConvert.SerializeObject(riotresponse));
+                            
+                        //Console.WriteLine(data);
+
+                            return;*/
+                            await ReplyAsync("you entered " + response + " is this the correct? Reply with 'yes' or 'no'");
+                            var confirmation = await NextMessageAsync();
+                            if(confirmation.ToString() == "yes")
+                            {
+                                Console.WriteLine("made it to yes answer");
+                                run = true;
+                                Console.WriteLine("made it to true");
+                                string confirm = response.ToString();
+                                
+                               
+                                Console.WriteLine("made it to cast");
+                                await ReplyAsync("Cool, you've confirmed the ign");
+
+
+                                var google = new googleSheet();
+                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm);
+                                await ReplyAsync(confirm + " successfully added to google sheet!");
+                                await calledUser.AddRoleAsync(team);
+                               
+                            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm);
+                        }
+                            
+                        }
+
+                        
+
                     }
                     catch
                     {
-                        await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                        
                     }
 
                 }
                 else
                 {
-                    await ReplyAsync("You are not owner/admin");
+                    await ReplyAsync("You are not owner/admin/captain of called team");
                 }
 
 
-            }
+            
         }
 
         [Command("checkperms")]
