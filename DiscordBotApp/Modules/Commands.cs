@@ -14,6 +14,9 @@ using System.Security.Cryptography.X509Certificates;
 using Discord.Rest;
 using System.Web;
 using System.Runtime.CompilerServices;
+using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
+using RiotNet;
+using RiotNet.Models;
 
 
 
@@ -26,13 +29,12 @@ using System.Runtime.CompilerServices;
 namespace DiscordBotApp.Modules
 
 {
-    
-    using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
-    using riotapi = DiscordBotApp.riotApi.riot;
+
+
 
     public class MsgModule : ModuleBase<SocketCommandContext>
     {
-
+        
 
         [Command("msg")]
         public async Task Msg(IRole role, [Remainder] string message)
@@ -58,7 +60,7 @@ namespace DiscordBotApp.Modules
 
                 foreach (var user in listOfUsers)
                 {
-                    
+
                     await Task.Delay(3000);
                     Console.WriteLine("in for each" + user);
                     try
@@ -115,31 +117,33 @@ namespace DiscordBotApp.Modules
             }
         }
     }
-    
+
     public class Commands : InteractiveBase
     {
-       
+     
+
+
         [Command("teamroster")]
 
         public async Task Ping(IRole teamName)
         {
-            
+
             //channel id of logs 767455535800385616
             //sending info to log
             var channel = Context.Guild as SocketGuild;
             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the teamroster command for " + teamName);
-           
+
 
             var user = Context.User as SocketGuildUser;
             //var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             //if (user.Roles.Contains(rolePermissionAdmin))
             {
-                  string[,] teamArray = new string[6, 3];
-                  var teamNameWithoutNumber = teamName.Name;
-                  var google = new googleSheet();
-                  string stringOfIgns = null;
-                  string oneMessage = null;
-                  IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
+                string[,] teamArray = new string[6, 3];
+                var teamNameWithoutNumber = teamName.Name;
+                var google = new googleSheet();
+                string stringOfIgns = null;
+                string oneMessage = null;
+                IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
                 {
@@ -152,12 +156,12 @@ namespace DiscordBotApp.Modules
                         //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
                         oneMessage = oneMessage + ($"{row[0]}, {row[1]}\n");
                         stringOfIgns = stringOfIgns + row[1] + ",";
-                        
+
                     }
 
 
                     await ReplyAsync(oneMessage + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf there are not 5 IGNs, please contact Admins.");
-                   // await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
+                    // await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
 
 
                 }
@@ -190,7 +194,7 @@ namespace DiscordBotApp.Modules
                 */
                 Console.WriteLine("made it");
                 var google = new googleSheet();
-               // var run = google.CreateTeam();
+                // var run = google.CreateTeam();
                 await ReplyAsync("recieved");
             }
         }
@@ -199,15 +203,15 @@ namespace DiscordBotApp.Modules
         [Command("purge")]
         [Alias("clean")]
         [Summary("Downloads and removes X messages from the current channel.")]
-        
+
         public async Task PurgeAsync(int amount)
         {
             var channel = Context.Guild as SocketGuild;
             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the clean command");
 
             var admin = Context.User as SocketGuildUser;
-           
-            
+
+
 
             var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             var currentChannel = Context.Channel.Id;
@@ -285,7 +289,7 @@ namespace DiscordBotApp.Modules
             var userAvatarUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
             await textChannel.SendMessageAsync(userAvatarUrl);
         }*/
-public async Task MessageUserAsync(IUser user)
+        public async Task MessageUserAsync(IUser user)
         {
             var admin = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -314,7 +318,7 @@ public async Task MessageUserAsync(IUser user)
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             if (user.Roles.Contains(rolePermissionAdmin))
             {
-                
+
                 var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
                 if (user.Roles.Contains(roleOfUser))
                 {
@@ -331,10 +335,10 @@ public async Task MessageUserAsync(IUser user)
             }
         }
         [Command("imposter")]
-        public async Task imposter(IUser user)
+        public async Task imposter(IGuildUser user)
         {
-            await ReplyAndDeleteAsync(user.Username + " is acting kinda sus...");
-            
+            await ReplyAsync(user.Username + " is acting kinda sus...");
+
         }
         /* [Command("updateroster")]
          // updates roster, can be used by team captain
@@ -356,8 +360,9 @@ public async Task MessageUserAsync(IUser user)
 
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            if (user.Roles.Contains(rolePermissionAdmin)){
-               
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+
                 var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
 
                 //captainroleid
@@ -413,7 +418,8 @@ public async Task MessageUserAsync(IUser user)
                                                 var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
                                                 var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
 
-                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
+                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, true, default);
+                                                
                                                 //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                                                 //var everyoneRestRole = everyoneRole as RestRole;
                                                 Console.WriteLine("before addpermissions text");
@@ -446,6 +452,7 @@ public async Task MessageUserAsync(IUser user)
                                                 }
 
 
+                                                
 
 
 
@@ -502,7 +509,7 @@ public async Task MessageUserAsync(IUser user)
                                             var permissions = new GuildPermissions(104324673);
 
                                             var addPermissions = new OverwritePermissions(70770240, 0);
-                                            
+
 
                                             //full channel team text
                                             // ulong assignChannelIdTeamText = 622919737365495849;
@@ -517,7 +524,7 @@ public async Task MessageUserAsync(IUser user)
                                             var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
                                             var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
 
-                                            var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, default);
+                                            var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, true, default);
                                             //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                                             //var everyoneRestRole = everyoneRole as RestRole;
                                             Console.WriteLine("before addpermissions text");
@@ -534,11 +541,11 @@ public async Task MessageUserAsync(IUser user)
                                             Console.WriteLine("before apply permissions to everyone");
 
 
-                                            
+
+                                            //need this outside of method for some reason
 
 
 
-                                            
 
 
 
@@ -583,7 +590,7 @@ public async Task MessageUserAsync(IUser user)
                             {
                                 await ReplyAsync("Please respond within 10 seconds, retry command"); return;
                             }
-                            
+
                         }
                         else
                         {
@@ -603,10 +610,57 @@ public async Task MessageUserAsync(IUser user)
 
 
             }
-           
-        }
 
-        [Command("addtoteam", RunMode = RunMode.Async)]
+        }
+        [Command("checkign")]
+        public async Task CheckIgn([Remainder]string ign)
+        {
+            string riotkey;
+            riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+            //string of combine summoner rank
+            string rankOfIgn = null;
+
+            IRiotClient client = new RiotClient(new RiotClientSettings
+            {
+                ApiKey = riotkey
+            });
+            try
+            {
+                Summoner summoner = await client.GetSummonerBySummonerNameAsync(ign, PlatformId.NA1).ConfigureAwait(true);
+                Console.WriteLine(summoner.Name);
+                Console.WriteLine(summoner);
+                if (summoner == null)
+                {
+                    await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                    return;
+                }
+                else if (summoner != null)
+                {
+                    Console.WriteLine("made it here fam");
+                    Console.WriteLine(summoner.Id.ToString());
+                    List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(true);
+                    var loopThruElements = 0;
+                    var rank = lists[loopThruElements];
+
+                    //making sure to pull the right rank
+                    while (rank.QueueType != "RANKED_SOLO_5x5")
+                    {
+                        Console.WriteLine("made it into while " + loopThruElements + 1);
+                        loopThruElements++;
+                        rank = lists[loopThruElements];
+                    }
+                    await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                    rankOfIgn = rank.Tier + " " + rank.Rank;
+                }
+            }
+            catch
+            {
+                await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                return;
+            }
+        }
+        [Command("add", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
         [Summary
        ("add to team")]
@@ -614,109 +668,184 @@ public async Task MessageUserAsync(IUser user)
         {
 
             var channel = Context.Guild as SocketGuild;
-            
+
             //check if while loop should run
             bool run = false;
-            
+
 
             Console.WriteLine("made it into addtoteam");
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            
-                Console.WriteLine("made it past admin");
-                var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
-                
-                
-                var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+
+            Console.WriteLine("made it past admin");
+            var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+
+
+            var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
             //checks if role admin or owner
             if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(team))))
+            {
+                if (role == "top")
                 {
-                    if (role == "top")
-                    {
-                        Console.WriteLine("adding top");
-                        
+                    Console.WriteLine("adding top");
 
-                    }
-                    else if(role == "jg")
-                    {
-                        Console.WriteLine("adding jg");
-                    }
-                    else if(role == "mid")
-                    {
-                        Console.WriteLine("adding mid");
-                    }
-                    else if(role == "adc")
-                    {
-                        Console.WriteLine("adding adc");
-                    }
-                    else if(role == "sup")
-                    {
-                        Console.WriteLine("adding sup");
-                    }
-                    else
-                    {
-                        await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup' for example !addtoteam @teamrole mid @midsdiscord");
-                        return;
-                    }
-                    try
-                    {
-                        while (run == false)
-                        {
-                            await ReplyAsync("What is the ign of the player?");
-                            var response = await NextMessageAsync();
-                           /* string riotkey;
-                            riotkey = ConfigurationManager.AppSettings.Get("riotkey");
-                            
-                            WebRequest riotrequest = WebRequest.Create("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + HttpUtility.UrlEncode(response.ToString()) + "?api_key=" + riotkey);
-                            WebResponse riotresponse = riotrequest.GetResponse();
-                        //var data = JsonConvert.DeserializeObject<Dictionary<string, riotApi.riot>>(riotresponse.ToString());
-                             Console.WriteLine(((HttpWebResponse)riotresponse).StatusCode + "status discription");
-                             //Console.WriteLine(JsonConvert.SerializeObject(riotresponse));
-                            
-                        //Console.WriteLine(data);
-
-                            return;*/
-                            await ReplyAsync("you entered " + response + " is this the correct? Reply with 'yes' or 'no'");
-                            var confirmation = await NextMessageAsync();
-                            if(confirmation.ToString() == "yes")
-                            {
-                                Console.WriteLine("made it to yes answer");
-                                run = true;
-                                Console.WriteLine("made it to true");
-                                string confirm = response.ToString();
-                                
-                               
-                                Console.WriteLine("made it to cast");
-                                await ReplyAsync("Cool, you've confirmed the ign");
-
-
-                                var google = new googleSheet();
-                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm);
-                                await ReplyAsync(confirm + " successfully added to google sheet!");
-                                await calledUser.AddRoleAsync(team);
-                               
-                            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm);
-                        }
-                            
-                        }
-
-                        
-
-                    }
-                    catch
-                    {
-                        
-                    }
-
+                }
+                else if (role == "jg")
+                {
+                    Console.WriteLine("adding jg");
+                }
+                else if (role == "mid")
+                {
+                    Console.WriteLine("adding mid");
+                }
+                else if (role == "adc")
+                {
+                    Console.WriteLine("adding adc");
+                }
+                else if (role == "sup")
+                {
+                    Console.WriteLine("adding sup");
                 }
                 else
                 {
-                    await ReplyAsync("You are not owner/admin/captain of called team");
+                    await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup' for example !add @teamrole mid @midsdiscord");
+                    return;
+                }
+                try
+                {
+                    //keep asking until false
+                    while (run == false)
+                    {
+                        await ReplyAsync("What is the ign of the player?");
+                        var response = await NextMessageAsync();
+                         string riotkey;
+                         riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                        //string of combine summoner rank
+                        string rankOfIgn = null;
+
+                        IRiotClient client = new RiotClient(new RiotClientSettings
+                        {
+                            ApiKey = riotkey
+                        });
+                        try
+                        {
+                            Summoner summoner = await client.GetSummonerBySummonerNameAsync(response.ToString(), PlatformId.NA1).ConfigureAwait(false);                            if (summoner == null)
+                            {
+                                await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                                return;
+                            }
+                            else if(summoner != null)
+                            {
+                                List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
+                                
+                                var loopThruElements = 0;
+                                var rank = lists[loopThruElements];
+                                while (rank.QueueType != "RANKED_SOLO_5x5")
+                                {
+                                    loopThruElements++;
+                                    rank = lists[loopThruElements];
+                                }
+                                await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                rankOfIgn = rank.Tier + " " + rank.Rank;
+                            }
+                        }
+                        catch
+                        {
+                            await ReplyAsync("unfortnately, there isn't a player by that name, or they haven't played ranked this season. Please try again");
+                            return;
+                        }
+                        
+                       
+                        //await ReplyAsync("Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
+                        
+
+                        //Console.WriteLine(data);
+
+                        
+                       
+                        
+                        
+                        var confirmation = await NextMessageAsync();
+                        if (confirmation.ToString() == "yes")
+                        {
+                            Console.WriteLine("made it to yes answer");
+                            run = true;
+                            Console.WriteLine("made it to true");
+                            string confirm = response.ToString();
+
+
+                            Console.WriteLine("made it to cast");
+                            await ReplyAsync("Cool, you've confirmed the ign");
+
+                            try
+                            {
+                                var google = new googleSheet();
+                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm/*, rankOfIgn*/);
+                                await ReplyAsync(confirm + " successfully added to google sheet!");
+                                await calledUser.AddRoleAsync(team);
+
+                                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm);
+                            }
+                            catch
+                            {
+                                await ReplyAsync("no sheet with that role, please contact admins");
+                            }
+                        }
+                        else if(confirmation == null)
+                        {
+                            await ReplyAsync("plz try again");
+                        }
+
+                    }
+
+
+
+                }
+                catch
+                {
+
                 }
 
+            }
+            else
+            {
+                await ReplyAsync("You are not owner/admin/captain of called team");
+            }
 
-            
+
+
+        }
+
+        [Command("remove")]
+        public async Task RemoveFromTeam(IRole role, IGuildUser removedUser)
+        {
+            var channel = Context.Guild as SocketGuild;
+
+
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the remove command to remove role  " + role + " frome " + removedUser);
+
+
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+
+            Console.WriteLine("made it past admin");
+            var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+
+
+            var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+
+            //checks if role admin or owner
+            if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(role))))
+            {
+                await removedUser.RemoveRoleAsync(role);
+                await ReplyAndDeleteAsync("Role removed");
+            }
+            else
+            {
+                await ReplyAndDeleteAsync("You are not owner/admin/captain of called team");
+            }
         }
 
         [Command("checkperms")]
@@ -729,7 +858,7 @@ public async Task MessageUserAsync(IUser user)
 
 
                 var roles = roleName.Permissions.ToString();
-               
+
 
 
                 await ReplyAsync(roles);
@@ -737,7 +866,7 @@ public async Task MessageUserAsync(IUser user)
             }
 
         }
-        
+
         [Command("checkcatid")]
         public async Task checkcatid(IGuildChannel id)
         {
@@ -756,23 +885,25 @@ public async Task MessageUserAsync(IUser user)
             }
         }
 
-       /* [Command("checkValue")]
-        public async Task checkDeny(IGuildChannel id)
-        {
+        /* [Command("checkValue")]
+         public async Task checkDeny(IGuildChannel id)
+         {
 
 
 
-           // var denyValue = new OverwritePermissions.
+            // var denyValue = new OverwritePermissions.
 
-            var allowValue = id.AllowValue.ToString();
-
-
-            await ReplyAsync("this is denyvalue" + denyValue);
-
-            await ReplyAsync("this is approvevalue" + allowValue);
+             var allowValue = id.AllowValue.ToString();
 
 
+             await ReplyAsync("this is denyvalue" + denyValue);
 
-        }*/
+             await ReplyAsync("this is approvevalue" + allowValue);
+
+
+
+         }*/
     }
 }
+
+    

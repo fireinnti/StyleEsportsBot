@@ -204,7 +204,7 @@ namespace DiscordBotApp
                // Console.Read();
             }
 
-            public string addToTeam(string teamName, string role, string ign)
+            public string addToTeam(string teamName, string role, string ign/*, string rankOfIgn*/)
             {
                 Console.WriteLine("made it into addteam in google" );
                 Console.WriteLine("team name is " + teamName);
@@ -233,7 +233,7 @@ namespace DiscordBotApp
                     HttpClientInitializer = credential,
                     ApplicationName = ApplicationName,
                 });
-
+                Console.WriteLine("made it past sheets");
                 //get token of sheet url
                 string googleSheetUrl;
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
@@ -243,23 +243,23 @@ namespace DiscordBotApp
                 if (role == "top")
                 {
 
-                     range = $"{teamName}!B2";
+                    range = $"{teamName}!B2";
 
                 }
-                else if(role == "jg")
+                else if (role == "jg")
                 {
                     range = $"{teamName}!B3";
 
                 }
-                else if(role == "mid")
+                else if (role == "mid")
                 {
                     range = $"{teamName}!B4";
                 }
-                else if(role == "adc")
+                else if (role == "adc")
                 {
                     range = $"{teamName}!B5";
                 }
-                else if(role == "sup")
+                else if (role == "sup")
                 {
                     range = $"{teamName}!B6";
                 }
@@ -274,13 +274,15 @@ namespace DiscordBotApp
                 Data.ValueRange requestBody = new Data.ValueRange();
                 requestBody.Range = range;
                // requestBody.MajorDimension = "ROWS";
-                requestBody.Values = new List<IList<object>> { ignList };
+                requestBody.Values = new List<IList<object>> { ignList};
 
                 SpreadsheetsResource.ValuesResource.UpdateRequest request = service.Spreadsheets.Values.Update(requestBody, googleSheetUrl, range);
 
                 request.ValueInputOption = valueInput;
+                Console.WriteLine("before execute");
                 
                 Data.UpdateValuesResponse response = request.Execute();
+
 
 
                 Console.WriteLine(JsonConvert.SerializeObject(response));
@@ -297,5 +299,5 @@ namespace DiscordBotApp
 
         }
     }
-    }
+}
 
