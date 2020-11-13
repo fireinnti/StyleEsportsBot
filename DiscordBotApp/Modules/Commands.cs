@@ -782,7 +782,7 @@ namespace DiscordBotApp.Modules
                             try
                             {
                                 var google = new googleSheet();
-                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm/*, rankOfIgn*/);
+                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn);
                                 await ReplyAsync(confirm + " successfully added to google sheet!");
                                 await calledUser.AddRoleAsync(team);
 

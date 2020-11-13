@@ -204,9 +204,9 @@ namespace DiscordBotApp
                // Console.Read();
             }
 
-            public string addToTeam(string teamName, string role, string ign/*, string rankOfIgn*/)
+            public string addToTeam(string teamName, string role, string ign, string rankOfIgn)
             {
-                Console.WriteLine("made it into addteam in google" );
+                Console.WriteLine("made it into addteam in google");
                 Console.WriteLine("team name is " + teamName);
                 Console.WriteLine("role is " + role);
                 Console.WriteLine("i list object is " + ign);
@@ -238,53 +238,80 @@ namespace DiscordBotApp
                 string googleSheetUrl;
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
 
-                String range = $"{teamName}!B2";
+                String rangeForIgn = $"{teamName}!B2";
                 // Define request parameters.
                 if (role == "top")
                 {
 
-                    range = $"{teamName}!B2";
+                    rangeForIgn = $"{teamName}!B2";
 
                 }
                 else if (role == "jg")
                 {
-                    range = $"{teamName}!B3";
+                    rangeForIgn = $"{teamName}!B3";
 
                 }
                 else if (role == "mid")
                 {
-                    range = $"{teamName}!B4";
+                    rangeForIgn = $"{teamName}!B4";
                 }
                 else if (role == "adc")
                 {
-                    range = $"{teamName}!B5";
+                    rangeForIgn = $"{teamName}!B5";
                 }
                 else if (role == "sup")
                 {
-                    range = $"{teamName}!B6";
+                    rangeForIgn = $"{teamName}!B6";
                 }
-                SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum valueInput = (SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum)2;  // TODO: Update placeholder value.
 
-               // SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum insertData = (SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum)1;  // TODO: Update placeholder value.
+                String rangeForRank = $"{teamName}!C2";
+                // Define request parameters.
+                if (role == "top")
+                {
 
+                    rangeForRank = $"{teamName}!C2";
 
-                //create list for values
+                }
+                else if (role == "jg")
+                {
+                    rangeForRank = $"{teamName}!C3";
+
+                }
+                else if (role == "mid")
+                {
+                    rangeForRank = $"{teamName}!C4";
+                }
+                else if (role == "adc")
+                {
+                    rangeForRank = $"{teamName}!C5";
+                }
+                else if (role == "sup")
+                {
+                    rangeForRank = $"{teamName}!C6";
+                }
+                string valueInputOption = "USER_ENTERED";
+
                 var ignList = new string[] { ign };
+                var ignListRank = new string[]  { rankOfIgn } ;
 
-                Data.ValueRange requestBody = new Data.ValueRange();
-                requestBody.Range = range;
-               // requestBody.MajorDimension = "ROWS";
-                requestBody.Values = new List<IList<object>> { ignList};
 
-                SpreadsheetsResource.ValuesResource.UpdateRequest request = service.Spreadsheets.Values.Update(requestBody, googleSheetUrl, range);
-
-                request.ValueInputOption = valueInput;
-                Console.WriteLine("before execute");
-                
-                Data.UpdateValuesResponse response = request.Execute();
+                List<Data.ValueRange> data = new List<Data.ValueRange>();
+                data.Add(new Data.ValueRange() { Range = rangeForIgn, Values = new List<IList<object>>{ ignList } });
+                data.Add(new Data.ValueRange() { Range = rangeForRank, Values = new List<IList<object>> { ignListRank } });
 
 
 
+                Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
+                requestBody.ValueInputOption = valueInputOption;
+                requestBody.Data = data;
+
+                SpreadsheetsResource.ValuesResource.BatchUpdateRequest request = service.Spreadsheets.Values.BatchUpdate(requestBody, googleSheetUrl);
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.BatchUpdateValuesResponse response = request.Execute();
+                // Data.BatchUpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
                 Console.WriteLine(JsonConvert.SerializeObject(response));
 
                 return null;
