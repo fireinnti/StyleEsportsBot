@@ -143,7 +143,7 @@ namespace DiscordBotApp.Modules
                 var google = new googleSheet();
                 string stringOfIgns = null;
                 string oneMessage = null;
-                IList<IList<Object>> values = google.Google(teamNameWithoutNumber);
+                IList<IList<Object>> values = google.TeamRoster(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
                 {
@@ -172,32 +172,7 @@ namespace DiscordBotApp.Modules
             }*/
         }
 
-        [Command("creategooglesheet")]
-
-        public async Task createGoogleSheet()
-        {
-            Console.WriteLine("made it in command" + Context.User);
-
-            var user = Context.User as SocketGuildUser;
-            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            if (user.Roles.Contains(rolePermissionAdmin))
-            {
-                /*  string[,] teamArray = new string[5, 2];
-
-                  var google = new googleSheet();
-                  IList<IList<Object>> values = google.Google();
-                  //Console.WriteLine("am I in here?" + google.Google());
-                  foreach (var row in values)
-                  {
-                      await ReplyAsync($"{row[0]}, {row[1]}");
-                  }
-                */
-                Console.WriteLine("made it");
-                var google = new googleSheet();
-                // var run = google.CreateTeam();
-                await ReplyAsync("recieved");
-            }
-        }
+        
 
 
         [Command("purge")]
@@ -383,9 +358,9 @@ namespace DiscordBotApp.Modules
                         if (askIfOrg != null)
                         {
 
-                            if (askIfOrg.ToString() == "yes" || askIfOrg.ToString() == "no")
+                            if (askIfOrg.ToString().ToLower() == "yes" || askIfOrg.ToString().ToLower() == "no")
                             {
-                                if (askIfOrg.ToString() == "yes")
+                                if (askIfOrg.ToString().ToLower() == "yes")
                                 {
                                     await ReplyAsync("Okay, what is the orgs name?");
                                     var nameOfOrg = await NextMessageAsync();
@@ -395,7 +370,7 @@ namespace DiscordBotApp.Modules
                                         var response = await NextMessageAsync();
                                         if (response != null)
                                         {
-                                            if (response.ToString() == "yes" || response.ToString() == "no")
+                                            if (response.ToString().ToLower() == "yes" || response.ToString().ToLower() == "no")
                                             {
                                                 await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
 
@@ -440,13 +415,13 @@ namespace DiscordBotApp.Modules
 
 
 
-                                                if (askIfOrg.ToString() == "yes")
+                                                if (askIfOrg.ToString().ToLower() == "yes")
                                                 {
 
                                                     var createOrgTextChannel = await Context.Guild.CreateTextChannelAsync(nameOfOrg.ToString(), channel => channel.CategoryId = assignChannelIdOrgText, default);
                                                     await createOrgTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
                                                 }
-                                                else if (askIfOrg.ToString() == "no")
+                                                else if (askIfOrg.ToString().ToLower() == "no")
                                                 {
                                                     await ReplyAsync("Okay, this is not an org.");
                                                 }
@@ -462,13 +437,13 @@ namespace DiscordBotApp.Modules
 
 
 
-                                                if (response.ToString() == "yes")
+                                                if (response.ToString().ToLower() == "yes")
                                                 {
                                                     var google = new googleSheet();
                                                     var run = google.CreateTeam(teamNameBeingCreated);
                                                     await ReplyAsync("Google sheet created.");
                                                 }
-                                                else if (response.ToString() == "no")
+                                                else if (response.ToString().ToLower() == "no")
                                                 {
                                                     await ReplyAsync("No google sheet created.");
                                                 }
@@ -502,7 +477,7 @@ namespace DiscordBotApp.Modules
                                     var response = await NextMessageAsync();
                                     if (response != null)
                                     {
-                                        if (response.ToString() == "yes" || response.ToString() == "no")
+                                        if (response.ToString().ToLower() == "yes" || response.ToString().ToLower() == "no")
                                         {
                                             await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
 
@@ -557,13 +532,13 @@ namespace DiscordBotApp.Modules
 
 
 
-                                            if (response.ToString() == "yes")
+                                            if (response.ToString().ToLower() == "yes")
                                             {
                                                 var google = new googleSheet();
                                                 var run = google.CreateTeam(teamNameBeingCreated);
                                                 await ReplyAsync("Google sheet created.");
                                             }
-                                            else if (response.ToString() == "no")
+                                            else if (response.ToString().ToLower() == "no")
                                             {
                                                 await ReplyAsync("No google sheet created.");
                                             }
@@ -650,7 +625,7 @@ namespace DiscordBotApp.Modules
                         loopThruElements++;
                         rank = lists[loopThruElements];
                     }
-                    await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                    await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
                     rankOfIgn = rank.Tier + " " + rank.Rank;
                 }
             }
@@ -666,6 +641,10 @@ namespace DiscordBotApp.Modules
        ("add to team")]
         public async Task addToTeam(IRole team, string role, IGuildUser calledUser)
         {
+            //holds int for number of subs
+            int numberOfSubs = 0;
+            //initializes googlesheet
+            var google = new googleSheet(); 
 
             var channel = Context.Guild as SocketGuild;
 
@@ -707,9 +686,17 @@ namespace DiscordBotApp.Modules
                 {
                     Console.WriteLine("adding sup");
                 }
+                else if(role == "sub")
+                {
+                    
+                    numberOfSubs = google.CheckSubCount(team.ToString());
+                    Console.WriteLine("adding sub");
+                    
+                    
+                }
                 else
                 {
-                    await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup' for example !add @teamrole mid @midsdiscord");
+                    await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup','sub' for example !add @teamrole mid @midsdiscord");
                     return;
                 }
                 try
@@ -724,7 +711,12 @@ namespace DiscordBotApp.Modules
 
                         //string of combine summoner rank
                         string rankOfIgn = null;
-
+                        //makes sure to not use riot api if no response
+                        if(response == null)
+                        {
+                            await ReplyAsync("no ign given");
+                            return;
+                        }
                         IRiotClient client = new RiotClient(new RiotClientSettings
                         {
                             ApiKey = riotkey
@@ -768,7 +760,12 @@ namespace DiscordBotApp.Modules
                         
                         
                         var confirmation = await NextMessageAsync();
-                        if (confirmation.ToString() == "yes")
+                        if(confirmation == null)
+                        {
+                            await ReplyAsync("no response");
+                            return;
+                        }
+                        if (confirmation.ToString().ToLower() == "yes")
                         {
                             Console.WriteLine("made it to yes answer");
                             run = true;
@@ -781,10 +778,98 @@ namespace DiscordBotApp.Modules
 
                             try
                             {
-                                var google = new googleSheet();
-                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn);
-                                await ReplyAsync(confirm + " successfully added to google sheet!");
-                                await calledUser.AddRoleAsync(team);
+                                if (role == "sub")
+                                {
+                                    if (numberOfSubs < 6)
+                                    {
+                                        var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn, numberOfSubs);
+                                        await ReplyAsync(confirm + " successfully added to google sheet!");
+                                        await calledUser.AddRoleAsync(team);
+                                    }
+                                    else
+                                    {
+                                        await ReplyAsync("You have six subs, do you want to overwrite? 'yes' or 'no' ");
+                                        var shouldWeOverwriteASub = await NextMessageAsync();
+                                        if(shouldWeOverwriteASub == null)
+                                        {
+                                            await ReplyAsync("no response");
+                                            return;
+                                        }
+                                        if (shouldWeOverwriteASub.ToString().ToLower() == "yes")
+                                        {
+                                            //what to do if they say yes :(
+                                            
+                                            string oneMessage = null;
+                                            IList<IList<Object>> values = google.SubDestroyer(team.ToString());
+                                            //Console.WriteLine("am I in here?" + google.Google());
+                                            if (values == null)
+                                            {
+                                                await ReplyAsync("role does not match a team in google sheets roster");
+                                            }
+                                            else
+                                            {
+                                                int num = 1;
+                                                foreach (var row in values)
+                                                {
+                                                    
+                                                    //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+                                                    oneMessage = oneMessage + $"{num}. {row[0]}\n";
+                                                    num++;
+                                                    
+
+                                                }
+
+
+                                            }
+                                            await ReplyAsync(oneMessage + "\n Enter the number that corresponds with the sub you want to overwrite");
+                                            var numberOfAxedSub = await NextMessageAsync();
+                                            if(numberOfAxedSub == null)
+                                            {
+                                                await ReplyAsync("No answer");
+                                                return;
+                                            }
+                                            if (numberOfAxedSub.ToString() == "1" || numberOfAxedSub.ToString() == "2" || numberOfAxedSub.ToString() == "3" || numberOfAxedSub.ToString() == "4"
+                                                || numberOfAxedSub.ToString() == "5" || numberOfAxedSub.ToString() == "6")
+                                            {
+                                                int intNumberOfAxedSub = Int32.Parse(numberOfAxedSub.ToString());
+                                                var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn, intNumberOfAxedSub - 1);
+                                                await ReplyAsync(confirm + " successfully added to google sheet!");
+                                                await calledUser.AddRoleAsync(team);
+                                            }
+                                            else if (numberOfAxedSub == null)
+                                            {
+                                                await ReplyAsync("No answer");
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                await ReplyAsync("Use numbers 1-6 to indicate answer");
+                                                return;
+                                            }
+
+                                        }
+                                        else if (shouldWeOverwriteASub == null)
+                                        {
+                                            await ReplyAsync("No sub was replaced");
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            await ReplyAsync("No sub was replaced");
+                                            return;
+                                        }
+
+                                    }
+
+                                }
+                                else
+                                {
+
+                                    
+                                    var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn);
+                                    await ReplyAsync(confirm + " successfully added to google sheet!");
+                                    await calledUser.AddRoleAsync(team);
+                                }
 
                                 var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm);
                             }

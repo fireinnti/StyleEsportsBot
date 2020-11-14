@@ -26,7 +26,7 @@ namespace DiscordBotApp
             static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 
-            public IList<IList<Object>> Google( string teamName)
+            public IList<IList<Object>> TeamRoster( string teamName)
             {
                 Console.WriteLine("made it");
                 UserCredential credential;
@@ -97,8 +97,141 @@ namespace DiscordBotApp
                 
             }
 
+            //gives list of subs to determine which to overwrite
+            public IList<IList<Object>> SubDestroyer(string teamName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
 
-           
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // Define request parameters.
+
+                String range = $"{teamName}!B9:B14";
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
+
+                    if (values != null && values.Count > 0)
+                    {
+                        Console.WriteLine("Role, In Game Name");
+                        string[] teamArray = new string[6];
+                        foreach (var row in values)
+                        {
+                            int num = 0;
+                            // Print columns A and E, which correspond to indices 0 and 4.
+                            Console.WriteLine("{0}", row[0]);
+                            teamArray[num] = row[0].ToString();
+                            num++;
+
+
+                        }
+                        Console.WriteLine("sending" + values);
+                        
+                        return response.Values;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    return null;
+                }
+                return null;
+
+            }
+            //checks sub count
+            public int CheckSubCount(string teamName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // Define request parameters.
+
+                String range = $"{teamName}!B9:B14";
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
+
+                    if (values != null && values.Count > 0)
+                    {
+                        
+                        
+                        
+                        Console.WriteLine("sending number of subs" + values.Count);
+                        
+                        return values.Count;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    return 0;
+                }
+                return 0;
+
+            }
+
+
             //creates team
             public string CreateTeam(string teamName)
             {
@@ -289,16 +422,159 @@ namespace DiscordBotApp
                 {
                     rangeForRank = $"{teamName}!C6";
                 }
-                string valueInputOption = "USER_ENTERED";
+                string valueInputOption = "RAW";
+
+                //get date and time to mark last change
+                DateTime today = DateTime.UtcNow;
+                //range for time
+                var rangeForTime = $"{teamName}!B7";
+
 
                 var ignList = new string[] { ign };
-                var ignListRank = new string[]  { rankOfIgn } ;
+                var ignListRank = new string[] { rankOfIgn };
+                var dateAndTime = new string[] { today.ToString("U") + " " + today.Kind };
 
 
                 List<Data.ValueRange> data = new List<Data.ValueRange>();
                 data.Add(new Data.ValueRange() { Range = rangeForIgn, Values = new List<IList<object>>{ ignList } });
                 data.Add(new Data.ValueRange() { Range = rangeForRank, Values = new List<IList<object>> { ignListRank } });
+                data.Add(new Data.ValueRange() { Range = rangeForTime, Values = new List<IList<object>> { dateAndTime } });
 
+
+
+                Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
+                requestBody.ValueInputOption = valueInputOption;
+                requestBody.Data = data;
+
+                SpreadsheetsResource.ValuesResource.BatchUpdateRequest request = service.Spreadsheets.Values.BatchUpdate(requestBody, googleSheetUrl);
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.BatchUpdateValuesResponse response = request.Execute();
+                // Data.BatchUpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+
+                return null;
+                /* else
+                 {
+                     Console.WriteLine("No data found.");
+
+                 }*/
+                // Console.Read();
+            }
+
+            //overload method for subs
+            public string addToTeam(string teamName, string role, string ign, string rankOfIgn, int numberOfSubs)
+            {
+                Console.WriteLine("made it into addteam in google");
+                Console.WriteLine("team name is " + teamName);
+                Console.WriteLine("role is " + role);
+                Console.WriteLine("i list object is " + ign);
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+                Console.WriteLine("made it past sheets");
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                String rangeForIgn = $"{teamName}!B2";
+                // Define request parameters.
+                if (role == "top")
+                {
+
+                    rangeForIgn = $"{teamName}!B2";
+
+                }
+                else if (role == "jg")
+                {
+                    rangeForIgn = $"{teamName}!B3";
+
+                }
+                else if (role == "mid")
+                {
+                    rangeForIgn = $"{teamName}!B4";
+                }
+                else if (role == "adc")
+                {
+                    rangeForIgn = $"{teamName}!B5";
+                }
+                else if (role == "sup")
+                {
+                    rangeForIgn = $"{teamName}!B6";
+                }
+                else if (role == "sub")
+                {
+                    rangeForIgn = $"{teamName}!B{numberOfSubs + 9}";
+                }
+
+                String rangeForRank = $"{teamName}!C2";
+                // Define request parameters.
+                if (role == "top")
+                {
+
+                    rangeForRank = $"{teamName}!C2";
+
+                }
+                else if (role == "jg")
+                {
+                    rangeForRank = $"{teamName}!C3";
+
+                }
+                else if (role == "mid")
+                {
+                    rangeForRank = $"{teamName}!C4";
+                }
+                else if (role == "adc")
+                {
+                    rangeForRank = $"{teamName}!C5";
+                }
+                else if (role == "sup")
+                {
+                    rangeForRank = $"{teamName}!C6";
+                }
+                else if (role == "sub")
+                {
+                    rangeForRank = $"{teamName}!C{numberOfSubs + 9}";
+                }
+                string valueInputOption = "RAW";
+
+                //get date and time to mark last change
+                DateTime today = DateTime.UtcNow;
+
+                var ignList = new string[] { ign };
+                var ignListRank = new string[] { rankOfIgn };
+                var dateAndTime = new string[] { today.ToString(today.ToString("U") + " " + today.Kind )};
+                
+                //range for time
+                var rangeForTime = $"{teamName}!B7";
+
+
+                List<Data.ValueRange> data = new List<Data.ValueRange>();
+                data.Add(new Data.ValueRange() { Range = rangeForIgn, Values = new List<IList<object>> { ignList } });
+                data.Add(new Data.ValueRange() { Range = rangeForRank, Values = new List<IList<object>> { ignListRank } });
+                data.Add(new Data.ValueRange() { Range = rangeForTime, Values = new List<IList<object>> { dateAndTime } });
 
 
                 Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
