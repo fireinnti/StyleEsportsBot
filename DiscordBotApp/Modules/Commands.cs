@@ -34,6 +34,12 @@ namespace DiscordBotApp.Modules
 
     public class MsgModule : ModuleBase<SocketCommandContext>
     {
+        [Command("schedule")]
+        public async Task Schedule(IRole team1, IRole team2, [Remainder] string time)
+        {
+            await ReplyAsync("Sending dm to captain of " + team2 + " to confirm " + time);
+        }
+
         
 
         [Command("msg")]
@@ -143,7 +149,7 @@ namespace DiscordBotApp.Modules
                 var google = new googleSheet();
                 string stringOfIgns = null;
                 string oneMessage = null;
-                IList<IList<Object>> values = google.TeamRoster(teamNameWithoutNumber);
+                string[,] values = google.TeamRoster(teamNameWithoutNumber);
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
                 {
@@ -151,16 +157,32 @@ namespace DiscordBotApp.Modules
                 }
                 else
                 {
+                    int num = 0;
                     foreach (var row in values)
                     {
+                        
                         //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
-                        oneMessage = oneMessage + ($"{row[0]}, {row[1]}\n");
-                        stringOfIgns = stringOfIgns + row[1] + ",";
+                        
+                         if (num == 1)
+                        {
+                            oneMessage = oneMessage + " " + (row);
+                            stringOfIgns = stringOfIgns + row + ",";
+                        }
+                        else if(num == 2)
+                        {
+                            oneMessage = oneMessage + " " + (row) + "\n";
+                            num = -1;
+                        }
+                        else
+                        {
+                            oneMessage = oneMessage + (row);
+                        }
+                        num++;
 
                     }
 
 
-                    await ReplyAsync(oneMessage + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf there are not 5 IGNs, please contact Admins.");
+                    await ReplyAsync(oneMessage + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf an op.gg doesn't show up, please contact Admins.");
                     // await ReplyAsync("If there are not 5 IGNs, please contact Admins.");
 
 
@@ -323,6 +345,31 @@ namespace DiscordBotApp.Modules
              var roleOfUser = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
          }*/
+
+        [Command("result")]
+        public async Task Result(IRole team1, IRole team2, [Remainder] string win)
+        {
+            await ReplyAsync(team1 + " has beat " + team2 + "with a record of " + win + ". Is this correct? 'yes' or 'no'");
+
+            var response = await NextMessageAsync();
+            if (response != null)
+            {
+                if(response.ToString().ToLower() == "yes")
+                {
+                    await ReplyAsync("thanks, sending to other team captain to confirm result");
+                }
+                else if(response.ToString().ToLower() == "no")
+                {
+                    await ReplyAsync("please try again");
+
+                }
+                else
+                {
+                    await ReplyAsync("please respond yes or no when confirming, please try again.");
+                }
+
+            }
+        }
 
         [Command("createteam", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
@@ -635,6 +682,212 @@ namespace DiscordBotApp.Modules
                 return;
             }
         }
+        [Command("elo")]
+        public async Task CalculateElo(IRole team)
+        {
+            var google = new googleSheet();
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                List<int> topfive = new List<int>();
+                string[] values = google.CalculateElo(team.ToString());
+                foreach(var row in values)
+                {
+                    switch (row.ToString())
+                    {
+                        case "CHALLENGER I":
+                            topfive.Add(1);
+                            break;
+                        case "GRANDMASTER I":
+                            topfive.Add(2);
+                            break;
+                        case "MASTER I":
+                            topfive.Add(3);
+                            break;
+                        case "DIAMOND I":
+                            topfive.Add(4);
+                            break;
+                        case "DIAMOND II":
+                            topfive.Add(5);
+                            Console.WriteLine("made it here");
+                            break;
+                        case "DIAMOND III":
+                            topfive.Add(6);
+                            break;
+                        case "DIAMOND IV":
+                            topfive.Add(7);
+                            break;
+                        case "PLATINUM I":
+                            topfive.Add(8);
+                            break;
+                        case "PLATINUM II":
+                            topfive.Add(9);
+                            break;
+                        case "PLATINUM III":
+                            topfive.Add(10);
+                            break;
+                        case "PLATINUM IV":
+                            topfive.Add(11);
+                            break;
+                        case "GOLD I":
+                            topfive.Add(12);
+                            break;
+                        case "GOLD II":
+                            topfive.Add(13);
+                            break;
+                        case "GOLD III":
+                            topfive.Add(14);
+                            break;
+                        case "GOLD IV":
+                            topfive.Add(15);
+                            break;
+                        case "SILVER I":
+                            topfive.Add(16);
+                            break;
+                        case "SILVER II":
+                            topfive.Add(17);
+                            break;
+                        case "SILVER III":
+                            topfive.Add(18);
+                            break;
+                        case "SILVER IV":
+                            topfive.Add(19);
+                            break;
+                        case "BRONZE I":
+                            topfive.Add(20);
+                            break;
+                        case "BRONZE II":
+                            topfive.Add(21);
+                            break;
+                        case "BRONZE III":
+                            topfive.Add(22);
+                            break;
+                        case "BRONZE IV":
+                            topfive.Add(23);
+                            break;
+                        case "IRON I":
+                            topfive.Add(24);
+                            break;
+                        case "IRON II":
+                            topfive.Add(25);
+                            break;
+                        case "IRON III":
+                            topfive.Add(26);
+                            break;
+                        case "IRON IV":
+                            topfive.Add(27);
+                            break;
+                        default:
+                            Console.WriteLine("Nothing");
+                            break;
+                    }
+                }
+                Console.WriteLine("made it here"+ topfive.ToString());
+                var sortedList = topfive.OrderBy(x => x).ToList();
+                Console.WriteLine(sortedList.ToString());
+                var totalElo = 0;
+                for (int i = 0; i < 4; i++)
+                {
+                    
+                    var checkMyElo = sortedList[i];
+                    switch (checkMyElo)
+                    {
+                        case 1:
+                            totalElo = totalElo + 600;
+                            break;
+                        case 2:
+                            totalElo = totalElo + 550;
+                            break;
+                        case 3:
+                            totalElo = totalElo + 500;
+                            break;
+                        case 4:
+                            totalElo = totalElo + 475;
+                            break;
+                        case 5:
+                            totalElo = totalElo + 450;
+                            Console.WriteLine("made it here");
+                            break;
+                        case 6:
+                            totalElo = totalElo + 425;
+                            break;
+                        case 7:
+                            totalElo = totalElo + 390;
+                            break;
+                        case 8:
+                            totalElo = totalElo + 380;
+                            break;
+                        case 9:
+                            totalElo = totalElo + 360;
+                            break;
+                        case 10:
+                            totalElo = totalElo + 340;
+                            break;
+                        case 11:
+                            totalElo = totalElo + 320;
+                            break;
+                        case 12:
+                            totalElo = totalElo + 310;
+                            break;
+                        case 13:
+                            totalElo = totalElo + 290;
+                            break;
+                        case 14:
+                            totalElo = totalElo + 280;
+                            break;
+                        case 15:
+                            totalElo = totalElo + 270;
+                            break;
+                        case 16:
+                            totalElo = totalElo + 260;
+                            break;
+                        case 17:
+                            totalElo = totalElo + 250;
+                            break;
+                        case 18:
+                            totalElo = totalElo + 240;
+                            break;
+                        case 19:
+                            totalElo = totalElo + 230;
+                            break;
+                        case 20:
+                            totalElo = totalElo + 220;
+                            break;
+                        case 21:
+                            totalElo = totalElo + 210;
+                            break;
+                        case 22:
+                            totalElo = totalElo + 200;
+                            break;
+                        case 23:
+                            totalElo = totalElo + 190;
+                            break;
+                        case 24:
+                            totalElo = totalElo + 180;
+                            break;
+                        case 25:
+                            totalElo = totalElo + 170;
+                            break;
+                        case 26:
+                            totalElo = totalElo + 160;
+                            break;
+                        case 27:
+                            totalElo = totalElo + 150;
+                            break;
+                        default:
+                            Console.WriteLine("Nothing");
+                            break;
+                    }
+                 }
+                
+                google.InputElo(team.ToString(), totalElo);
+                await ReplyAsync(team + " has the starting elo of " + totalElo + "\n Added to googlesheet");
+
+            }
+
+            }
+
         [Command("add", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
         [Summary

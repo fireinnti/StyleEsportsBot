@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Linq;
+using RiotNet;
+using RiotNet.Models;
 
 using Data = Google.Apis.Sheets.v4.Data;
 
@@ -26,7 +28,7 @@ namespace DiscordBotApp
             static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 
-            public IList<IList<Object>> TeamRoster( string teamName)
+            public void InputElo(string teamName, int elo)
             {
                 Console.WriteLine("made it");
                 UserCredential credential;
@@ -57,35 +59,371 @@ namespace DiscordBotApp
                 string googleSheetUrl;
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
 
-                // Define request parameters.
 
-                String range = $"{teamName}!A2:B6";
-                SpreadsheetsResource.ValuesResource.GetRequest request =
-                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+                SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum)2;  // TODO: Update placeholder value.
+                // Define request parameters.
+                var elostring = new List<object>() { elo.ToString() };
+                Console.WriteLine(elo);
+                String range = $"{teamName}!D1";
+                Data.ValueRange requestBody = new Data.ValueRange();
+                requestBody.Values = new List<IList<object>>{ elostring };
+               
+
+                // Prints the names and igns in spreadsheet:
+                SpreadsheetsResource.ValuesResource.UpdateRequest request = service.Spreadsheets.Values.Update(requestBody, googleSheetUrl, range);
+                request.ValueInputOption = valueInputOption;
+                
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.UpdateValuesResponse response = request.Execute();
+                // Data.UpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+               
+
+            }
+        
+            public string[] CalculateElo(string teamName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                var numberOfSubs = CheckSubCount(teamName);
+
+
+                // Define request parameters.
+                
+                string eloRangeForMainTeam = $"{teamName}!C2:C6";
+                string eloRangeForSubTeam = $"{teamName}!C9";
+                if (numberOfSubs == 0)
+                {
+                    Console.WriteLine("no subs");
+                }
+                else if (numberOfSubs == 1)
+                {
+                    Console.WriteLine("one sub");
+                }
+                else
+                {
+                    eloRangeForSubTeam = $"{teamName}!C9:C{numberOfSubs + 9}";
+                }
+
+
+                List<string> ranges = new List<string>();
+                
+                
+                ranges.Add(eloRangeForMainTeam);
+                if (numberOfSubs > 0)
+                {
+                    ranges.Add(eloRangeForSubTeam);
+                }
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
 
                 // Prints the names and igns in spreadsheet:
                 try
                 {
-                    ValueRange response = request.Execute();
-                    IList<IList<Object>> values = response.Values;
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
 
-                    if (values != null && values.Count > 0)
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    
+
+
+                    var valuesOfMain = data[0].Values;
+                    var valuesOfSub = data[1].Values;
+                    if (valuesOfMain != null && valuesOfMain.Count > 0)
                     {
+
                         Console.WriteLine("Role, In Game Name");
-                        string[,] teamArray = new string[5, 2];
-                        foreach (var row in values)
+                        string[] teamArray = new string[numberOfSubs + 5];
+                        if (valuesOfSub != null && valuesOfSub.Count > 0)
                         {
                             int num = 0;
-                            // Print columns A and E, which correspond to indices 0 and 4.
-                            Console.WriteLine("{0}, {1}", row[0], row[1]);
-                            teamArray[num, 0] = row[0].ToString();
-                            num++;
-                            
+                            Console.WriteLine("Role, In Game Name, made in subs");
+
+
+
+                            foreach (var row in valuesOfMain)
+                            {
+
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Main roster{0}", row[0]);
+                                teamArray[num] = row[0].ToString();
+                                
+                                num++;
+
+
+                            }
+                            foreach (var row in valuesOfSub)
+                            {
+
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Sub roster {0}", row[0]);
+                                teamArray[num] = row[0].ToString();
+                                
+                                num++;
+
+
+                            }
+
+                            Console.WriteLine("sending main" + valuesOfMain);
+                            Console.WriteLine("sending subs" + valuesOfSub);
+                            Console.WriteLine(teamArray[0]);
+                            return teamArray;
 
                         }
-                        Console.WriteLine("sending" + values);
-                        Console.WriteLine(teamArray[0, 0]);
-                        return response.Values;
+                        else
+                        {
+                            int num = 0;
+                            foreach (var row in valuesOfMain)
+                            {
+
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Main roster{0}", row[0]);
+                                teamArray[num] = row[0].ToString();
+                                
+                                num++;
+
+
+                            }
+                            Console.WriteLine("sending" + valuesOfMain);
+                            Console.WriteLine(teamArray[0]);
+
+                            return teamArray;
+                        }
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    return null;
+                }
+                return null;
+
+            }
+
+            public string[,] TeamRoster( string teamName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                var numberOfSubs = CheckSubCount(teamName);
+                
+
+                // Define request parameters.
+                string lastChecked = $"{teamName}!B1";
+                string rangeForMainTeam = $"{teamName}!A2:C6";
+                string rangeForSubTeam = $"{teamName}!B9";
+                if(numberOfSubs == 0)
+                {
+                    Console.WriteLine("no subs");
+                }else
+                {
+                    rangeForSubTeam = $"{teamName}!A9:C{numberOfSubs + 9}";
+                }
+
+
+                List<string> ranges = new List<string>();
+                ranges.Add(lastChecked);
+                ranges.Add( rangeForMainTeam );
+                if (numberOfSubs > 0)
+                {
+                    ranges.Add(rangeForSubTeam);
+                }
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+                
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                
+                
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    /*if(data[0].Values == null)
+                    {
+                        IRiotClient client = new RiotClient(new RiotClientSettings
+                        {
+                            ApiKey = riotkey
+                        });
+                        try
+                        {
+                            Summoner summoner = client.GetSummonerBySummonerNameAsync(ign, PlatformId.NA1).ConfigureAwait(true);
+                            Console.WriteLine(summoner.Name);
+                            Console.WriteLine(summoner);
+                            
+                            else if (summoner != null)
+                            {
+                                Console.WriteLine("made it here fam");
+                                Console.WriteLine(summoner.Id.ToString());
+                                List<LeagueEntry> lists = client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(true);
+                                var loopThruElements = 0;
+                                var rank = lists[loopThruElements];
+
+                                //making sure to pull the right rank
+                                while (rank.QueueType != "RANKED_SOLO_5x5")
+                                {
+                                    Console.WriteLine("made it into while " + loopThruElements + 1);
+                                    loopThruElements++;
+                                    rank = lists[loopThruElements];
+                                }
+                                await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
+                                rankOfIgn = rank.Tier + " " + rank.Rank;
+                            }
+                        }
+                        catch
+                        {
+                            await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                            return;
+                        }
+                    }*/
+                
+
+                    var valuesOfMain = data[1].Values;
+                    var valuesOfSub = data[2].Values;
+                    if (valuesOfMain != null && valuesOfMain.Count > 0)
+                    {
+                        
+                        Console.WriteLine("Role, In Game Name");
+                        string[,] teamArray = new string[numberOfSubs + 5, 3];
+                        if (valuesOfSub != null && valuesOfSub.Count > 0)
+                        {
+                            int num = 0;
+                            Console.WriteLine("Role, In Game Name, made in subs");
+                            
+                            
+                            
+                            foreach (var row in valuesOfMain)
+                            {
+                                
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Main roster{0}, {1} , {2}", row[0], row[1], row[2]);
+                                teamArray[num, 0] = row[0].ToString();
+                                teamArray[num, 1] = row[1].ToString();
+                                teamArray[num, 2] = row[2].ToString();
+                                num++;
+
+
+                            }
+                            foreach (var row in valuesOfSub)
+                            {
+
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Sub roster {0}, {1}, {2}", row[0], row[1], row[2]);
+                                teamArray[num, 0] = row[0].ToString();
+                                teamArray[num, 1] = row[1].ToString();
+                                teamArray[num, 2] = row[2].ToString();
+                                num++;
+
+
+                            }
+
+                            Console.WriteLine("sending main" + valuesOfMain);
+                            Console.WriteLine("sending subs" + valuesOfSub);
+                            Console.WriteLine(teamArray[0, 0]);
+                            return teamArray;
+
+                        }
+                        else
+                        {
+                            int num = 0;
+                            foreach (var row in valuesOfMain)
+                            {
+                                
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Main roster{0}, {1} , {2}", row[0], row[1], row[2]);
+                                teamArray[num, 0] = row[0].ToString();
+                                teamArray[num, 1] = row[1].ToString();
+                                teamArray[num, 2] = row[2].ToString();
+                                num++;
+
+
+                            }
+                            Console.WriteLine("sending" + valuesOfMain);
+                            Console.WriteLine(teamArray[0, 0]);
+                            
+                            return teamArray;
+                        }
                     }
                 }
                 catch
@@ -432,7 +770,7 @@ namespace DiscordBotApp
 
                 var ignList = new string[] { ign };
                 var ignListRank = new string[] { rankOfIgn };
-                var dateAndTime = new string[] { today.ToString("U") + " " + today.Kind };
+                var dateAndTime = new string[] { today.ToString("f") + " " + today.Kind };
 
 
                 List<Data.ValueRange> data = new List<Data.ValueRange>();
@@ -565,10 +903,10 @@ namespace DiscordBotApp
 
                 var ignList = new string[] { ign };
                 var ignListRank = new string[] { rankOfIgn };
-                var dateAndTime = new string[] { today.ToString(today.ToString("U") + " " + today.Kind )};
+                var dateAndTime = new string[] { today.ToString("f") + " " + today.Kind};
                 
                 //range for time
-                var rangeForTime = $"{teamName}!B7";
+               var rangeForTime = $"{teamName}!B7";
 
 
                 List<Data.ValueRange> data = new List<Data.ValueRange>();
