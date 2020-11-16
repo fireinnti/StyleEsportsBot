@@ -40,7 +40,39 @@ namespace DiscordBotApp.Modules
             await ReplyAsync("Sending dm to captain of " + team2 + " to confirm " + time);
         }
 
-        
+        [Command("sheet")]
+
+        public async Task createSheet(IRole team)
+        {
+
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                var google = new googleSheet();
+                var run = google.CreateTeam(team.ToString());
+                google.TeamName(team.ToString());
+                await ReplyAsync("Google sheet created.");
+            }
+            
+        }
+        [Command("name")]
+
+        public async Task nameSheet(IRole team)
+        {
+
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                Console.WriteLine("before googlesheet");
+                var google = new googleSheet();
+                
+                google.CreateTeam(team.ToString());
+                await ReplyAsync("Google sheet named");
+            }
+
+        }
 
         [Command("msg")]
         public async Task Msg(IRole role, [Remainder] string message)
@@ -787,7 +819,7 @@ namespace DiscordBotApp.Modules
                 var sortedList = topfive.OrderBy(x => x).ToList();
                 Console.WriteLine(sortedList.ToString());
                 var totalElo = 0;
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     
                     var checkMyElo = sortedList[i];

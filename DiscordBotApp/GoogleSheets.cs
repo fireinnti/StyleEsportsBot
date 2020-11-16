@@ -60,11 +60,11 @@ namespace DiscordBotApp
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
 
 
-                SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum)2;  // TODO: Update placeholder value.
+                SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum)1;  // TODO: Update placeholder value.
                 // Define request parameters.
                 var elostring = new List<object>() { elo.ToString() };
                 Console.WriteLine(elo);
-                String range = $"{teamName}!D1";
+                String range = $"{teamName}!B3";
                 Data.ValueRange requestBody = new Data.ValueRange();
                 requestBody.Values = new List<IList<object>>{ elostring };
                
@@ -122,19 +122,21 @@ namespace DiscordBotApp
 
                 // Define request parameters.
                 
-                string eloRangeForMainTeam = $"{teamName}!C2:C6";
-                string eloRangeForSubTeam = $"{teamName}!C9";
+                string eloRangeForMainTeam = $"{teamName}!C11:C15";
+                string eloRangeForSubTeam = null;
                 if (numberOfSubs == 0)
                 {
+                    eloRangeForSubTeam = $"{teamName}!C19";
                     Console.WriteLine("no subs");
                 }
                 else if (numberOfSubs == 1)
                 {
+                    eloRangeForSubTeam = $"{teamName}!C19";
                     Console.WriteLine("one sub");
                 }
                 else
                 {
-                    eloRangeForSubTeam = $"{teamName}!C9:C{numberOfSubs + 9}";
+                    eloRangeForSubTeam = $"{teamName}!C19:C{numberOfSubs + 19}";
                 }
 
 
@@ -171,7 +173,16 @@ namespace DiscordBotApp
 
 
                     var valuesOfMain = data[0].Values;
-                    var valuesOfSub = data[1].Values;
+                    
+                    IList<IList<object>> valuesOfSub = null;
+                    try
+                    {
+                        valuesOfSub = data[1].Values;
+                    }
+                    catch
+                    {
+                        Console.WriteLine("no subs are written");
+                    }
                     if (valuesOfMain != null && valuesOfMain.Count > 0)
                     {
 
@@ -280,15 +291,15 @@ namespace DiscordBotApp
                 
 
                 // Define request parameters.
-                string lastChecked = $"{teamName}!B1";
-                string rangeForMainTeam = $"{teamName}!A2:C6";
-                string rangeForSubTeam = $"{teamName}!B9";
+                string lastChecked = $"{teamName}!B6";
+                string rangeForMainTeam = $"{teamName}!A11:C15";
+                string rangeForSubTeam = null;
                 if(numberOfSubs == 0)
                 {
                     Console.WriteLine("no subs");
                 }else
                 {
-                    rangeForSubTeam = $"{teamName}!A9:C{numberOfSubs + 9}";
+                    rangeForSubTeam = $"{teamName}!A19:C{numberOfSubs + 19}";
                 }
 
 
@@ -360,7 +371,15 @@ namespace DiscordBotApp
                 
 
                     var valuesOfMain = data[1].Values;
-                    var valuesOfSub = data[2].Values;
+                    IList<IList<object>> valuesOfSub = null;
+                    try
+                    {
+                        valuesOfSub = data[2].Values;
+                    }
+                    catch
+                    {
+                        Console.WriteLine("no subs are written");
+                    }
                     if (valuesOfMain != null && valuesOfMain.Count > 0)
                     {
                         
@@ -469,7 +488,7 @@ namespace DiscordBotApp
 
                 // Define request parameters.
 
-                String range = $"{teamName}!B9:B14";
+                String range = $"{teamName}!B19:B24";
                 SpreadsheetsResource.ValuesResource.GetRequest request =
                         service.Spreadsheets.Values.Get(googleSheetUrl, range);
 
@@ -540,7 +559,7 @@ namespace DiscordBotApp
 
                 // Define request parameters.
 
-                String range = $"{teamName}!B9:B14";
+                String range = $"{teamName}!B19:B24";
                 SpreadsheetsResource.ValuesResource.GetRequest request =
                         service.Spreadsheets.Values.Get(googleSheetUrl, range);
 
@@ -570,6 +589,60 @@ namespace DiscordBotApp
             }
 
 
+            //creates team name
+            public void TeamName(string teamName)
+            {
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+                SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum)1;  // TODO: Update placeholder value.
+                // Define request parameters.
+                var elostring = new List<object>() { teamName };
+                Console.WriteLine("team name added to new sheet");
+                String range = $"{teamName}!B2";
+                Data.ValueRange requestBody = new Data.ValueRange();
+                requestBody.Values = new List<IList<object>> { elostring };
+                
+
+
+                // Prints the names and igns in spreadsheet:
+                SpreadsheetsResource.ValuesResource.UpdateRequest request = service.Spreadsheets.Values.Update(requestBody, googleSheetUrl, range);
+                request.ValueInputOption = valueInputOption;
+
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.UpdateValuesResponse response = request.Execute();
+                // Data.UpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+            }
             //creates team
             public string CreateTeam(string teamName)
             {
@@ -644,14 +717,16 @@ namespace DiscordBotApp
                     {
                         SourceSheetId = masterSheet.Properties.SheetId,
                         NewSheetName = teamName,
-                        InsertSheetIndex = 8
+                        InsertSheetIndex = 8,
+                        
+                        
                        
 
                     }
                 };
                 var updater = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { newSheet } };
                 service.Spreadsheets.BatchUpdate(updater, googleSheetUrl).Execute();
-                
+
                 //Console.WriteLine(JsonConvert.SerializeObject(response));
 
 
@@ -665,6 +740,8 @@ namespace DiscordBotApp
 
                 // TODO: Change code below to process the `response` object:
                 // Console.WriteLine(JsonConvert.SerializeObject(response));
+                Console.WriteLine("after execute");
+                
 
                 return null;
                /* else
@@ -709,63 +786,63 @@ namespace DiscordBotApp
                 string googleSheetUrl;
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
 
-                String rangeForIgn = $"{teamName}!B2";
+                String rangeForIgn = $"{teamName}!B11";
                 // Define request parameters.
                 if (role == "top")
                 {
 
-                    rangeForIgn = $"{teamName}!B2";
+                    rangeForIgn = $"{teamName}!B11";
 
                 }
                 else if (role == "jg")
                 {
-                    rangeForIgn = $"{teamName}!B3";
+                    rangeForIgn = $"{teamName}!B12";
 
                 }
                 else if (role == "mid")
                 {
-                    rangeForIgn = $"{teamName}!B4";
+                    rangeForIgn = $"{teamName}!B13";
                 }
                 else if (role == "adc")
                 {
-                    rangeForIgn = $"{teamName}!B5";
+                    rangeForIgn = $"{teamName}!B14";
                 }
                 else if (role == "sup")
                 {
-                    rangeForIgn = $"{teamName}!B6";
+                    rangeForIgn = $"{teamName}!B15";
                 }
 
-                String rangeForRank = $"{teamName}!C2";
+                String rangeForRank = $"{teamName}!C11";
                 // Define request parameters.
                 if (role == "top")
                 {
 
-                    rangeForRank = $"{teamName}!C2";
+                    rangeForRank = $"{teamName}!C11";
 
                 }
                 else if (role == "jg")
                 {
-                    rangeForRank = $"{teamName}!C3";
+                    rangeForRank = $"{teamName}!C12";
 
                 }
                 else if (role == "mid")
                 {
-                    rangeForRank = $"{teamName}!C4";
+                    rangeForRank = $"{teamName}!C13";
                 }
                 else if (role == "adc")
                 {
-                    rangeForRank = $"{teamName}!C5";
+                    rangeForRank = $"{teamName}!C14";
                 }
                 else if (role == "sup")
                 {
-                    rangeForRank = $"{teamName}!C6";
+                    rangeForRank = $"{teamName}!C15";
                 }
                 string valueInputOption = "RAW";
 
                 //get date and time to mark last change
                 DateTime today = DateTime.UtcNow;
                 //range for time
-                var rangeForTime = $"{teamName}!B7";
+                var rangeForTime = $"{teamName}!B6";
 
 
                 var ignList = new string[] { ign };
@@ -837,64 +914,66 @@ namespace DiscordBotApp
                 string googleSheetUrl;
                 googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
 
-                String rangeForIgn = $"{teamName}!B2";
+                String rangeForIgn = $"{teamName}!B11";
                 // Define request parameters.
                 if (role == "top")
                 {
 
-                    rangeForIgn = $"{teamName}!B2";
+                    rangeForIgn = $"{teamName}!B11";
 
                 }
                 else if (role == "jg")
                 {
-                    rangeForIgn = $"{teamName}!B3";
+                    rangeForIgn = $"{teamName}!B12";
 
                 }
                 else if (role == "mid")
                 {
-                    rangeForIgn = $"{teamName}!B4";
+                    rangeForIgn = $"{teamName}!B13";
                 }
                 else if (role == "adc")
                 {
-                    rangeForIgn = $"{teamName}!B5";
+                    rangeForIgn = $"{teamName}!B14";
                 }
                 else if (role == "sup")
                 {
-                    rangeForIgn = $"{teamName}!B6";
+                    rangeForIgn = $"{teamName}!B15";
                 }
                 else if (role == "sub")
                 {
-                    rangeForIgn = $"{teamName}!B{numberOfSubs + 9}";
+                    rangeForIgn = $"{teamName}!B{numberOfSubs + 19}";
                 }
 
-                String rangeForRank = $"{teamName}!C2";
+                
+                String rangeForRank = $"{teamName}!C11";
                 // Define request parameters.
                 if (role == "top")
                 {
 
-                    rangeForRank = $"{teamName}!C2";
+                    rangeForRank = $"{teamName}!C11";
 
                 }
                 else if (role == "jg")
                 {
-                    rangeForRank = $"{teamName}!C3";
+                    rangeForRank = $"{teamName}!C12";
 
                 }
                 else if (role == "mid")
                 {
-                    rangeForRank = $"{teamName}!C4";
+                    rangeForRank = $"{teamName}!C13";
                 }
                 else if (role == "adc")
                 {
-                    rangeForRank = $"{teamName}!C5";
+                    rangeForRank = $"{teamName}!C14";
                 }
                 else if (role == "sup")
                 {
-                    rangeForRank = $"{teamName}!C6";
+                    rangeForRank = $"{teamName}!C15";
                 }
                 else if (role == "sub")
                 {
-                    rangeForRank = $"{teamName}!C{numberOfSubs + 9}";
+                    rangeForRank = $"{teamName}!C{numberOfSubs + 19}";
+                    
                 }
                 string valueInputOption = "RAW";
 
@@ -905,14 +984,16 @@ namespace DiscordBotApp
                 var ignListRank = new string[] { rankOfIgn };
                 var dateAndTime = new string[] { today.ToString("f") + " " + today.Kind};
                 
+                
                 //range for time
-               var rangeForTime = $"{teamName}!B7";
+               var rangeForTime = $"{teamName}!B6";
 
 
                 List<Data.ValueRange> data = new List<Data.ValueRange>();
                 data.Add(new Data.ValueRange() { Range = rangeForIgn, Values = new List<IList<object>> { ignList } });
                 data.Add(new Data.ValueRange() { Range = rangeForRank, Values = new List<IList<object>> { ignListRank } });
                 data.Add(new Data.ValueRange() { Range = rangeForTime, Values = new List<IList<object>> { dateAndTime } });
+                
 
 
                 Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
