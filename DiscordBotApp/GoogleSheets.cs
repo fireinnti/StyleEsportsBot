@@ -299,7 +299,7 @@ namespace DiscordBotApp
                     Console.WriteLine("no subs");
                 }else
                 {
-                    rangeForSubTeam = $"{teamName}!A19:C{numberOfSubs + 19}";
+                    rangeForSubTeam = $"{teamName}!A19:C{numberOfSubs + 18}";
                 }
 
 

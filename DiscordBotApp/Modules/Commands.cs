@@ -185,7 +185,7 @@ namespace DiscordBotApp.Modules
                 //Console.WriteLine("am I in here?" + google.Google());
                 if (values == null)
                 {
-                    await ReplyAsync("role does not match a team in google sheets roster");
+                    await ReplyAsync("Role does not match a team in google sheets roster");
                 }
                 else
                 {
@@ -388,16 +388,16 @@ namespace DiscordBotApp.Modules
             {
                 if(response.ToString().ToLower() == "yes")
                 {
-                    await ReplyAsync("thanks, sending to other team captain to confirm result");
+                    await ReplyAsync("Thanks, sending to other team captain to confirm result");
                 }
                 else if(response.ToString().ToLower() == "no")
                 {
-                    await ReplyAsync("please try again");
+                    await ReplyAsync("Please try again");
 
                 }
                 else
                 {
-                    await ReplyAsync("please respond yes or no when confirming, please try again.");
+                    await ReplyAsync("Please respond yes or no when confirming, please try again.");
                 }
 
             }
@@ -472,7 +472,7 @@ namespace DiscordBotApp.Modules
                                                 var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
                                                 var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
 
-                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, true, default);
+                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
                                                 
                                                 //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                                                 //var everyoneRestRole = everyoneRole as RestRole;
@@ -578,7 +578,7 @@ namespace DiscordBotApp.Modules
                                             var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
                                             var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
 
-                                            var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, false, true, default);
+                                            var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
                                             //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                                             //var everyoneRestRole = everyoneRole as RestRole;
                                             Console.WriteLine("before addpermissions text");
@@ -653,7 +653,7 @@ namespace DiscordBotApp.Modules
                     }
                     catch
                     {
-                        await ReplyAsync("error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                        await ReplyAsync("Error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
                     }
 
                 }
@@ -686,7 +686,7 @@ namespace DiscordBotApp.Modules
                 Console.WriteLine(summoner);
                 if (summoner == null)
                 {
-                    await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                    await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
                     return;
                 }
                 else if (summoner != null)
@@ -710,7 +710,7 @@ namespace DiscordBotApp.Modules
             }
             catch
             {
-                await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
                 return;
             }
         }
@@ -981,7 +981,7 @@ namespace DiscordBotApp.Modules
                 }
                 else
                 {
-                    await ReplyAsync("you did not enter a correct role format, please use 'top','jg','mid','adc','sup','sub' for example !add @teamrole mid @midsdiscord");
+                    await ReplyAsync("You did not enter a correct role format, please use 'top','jg','mid','adc','sup','sub' for example !add @teamrole mid @midsdiscord");
                     return;
                 }
                 try
@@ -1010,7 +1010,7 @@ namespace DiscordBotApp.Modules
                         {
                             Summoner summoner = await client.GetSummonerBySummonerNameAsync(response.ToString(), PlatformId.NA1).ConfigureAwait(false);                            if (summoner == null)
                             {
-                                await ReplyAsync("unfortnately, there isn't a player by that name. Please try again");
+                                await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
                                 return;
                             }
                             else if(summoner != null)
@@ -1024,13 +1024,13 @@ namespace DiscordBotApp.Modules
                                     loopThruElements++;
                                     rank = lists[loopThruElements];
                                 }
-                                await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
                                 rankOfIgn = rank.Tier + " " + rank.Rank;
                             }
                         }
                         catch
                         {
-                            await ReplyAsync("unfortnately, there isn't a player by that name, or they haven't played ranked this season. Please try again");
+                            await ReplyAsync("Unfortnately, there isn't a player by that name, or they haven't played ranked this season. Please try again");
                             return;
                         }
                         
@@ -1047,7 +1047,7 @@ namespace DiscordBotApp.Modules
                         var confirmation = await NextMessageAsync();
                         if(confirmation == null)
                         {
-                            await ReplyAsync("no response");
+                            await ReplyAsync("No response");
                             return;
                         }
                         if (confirmation.ToString().ToLower() == "yes")
@@ -1077,7 +1077,7 @@ namespace DiscordBotApp.Modules
                                         var shouldWeOverwriteASub = await NextMessageAsync();
                                         if(shouldWeOverwriteASub == null)
                                         {
-                                            await ReplyAsync("no response");
+                                            await ReplyAsync("No response");
                                             return;
                                         }
                                         if (shouldWeOverwriteASub.ToString().ToLower() == "yes")
@@ -1089,7 +1089,7 @@ namespace DiscordBotApp.Modules
                                             //Console.WriteLine("am I in here?" + google.Google());
                                             if (values == null)
                                             {
-                                                await ReplyAsync("role does not match a team in google sheets roster");
+                                                await ReplyAsync("Role does not match a team in google sheets roster");
                                             }
                                             else
                                             {
@@ -1160,12 +1160,12 @@ namespace DiscordBotApp.Modules
                             }
                             catch
                             {
-                                await ReplyAsync("no sheet with that role, please contact admins");
+                                await ReplyAsync("No sheet with that role, please contact admins");
                             }
                         }
                         else if(confirmation == null)
                         {
-                            await ReplyAsync("plz try again");
+                            await ReplyAsync("Please try again");
                         }
 
                     }
