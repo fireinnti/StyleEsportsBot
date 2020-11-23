@@ -15,6 +15,7 @@ using Discord.Rest;
 using System.Web;
 using System.Runtime.CompilerServices;
 using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
+using googleCalendar = CalendarStyle.GoogleCalendar;
 using RiotNet;
 using RiotNet.Models;
 
@@ -34,11 +35,436 @@ namespace DiscordBotApp.Modules
 
     public class MsgModule : ModuleBase<SocketCommandContext>
     {
-        [Command("schedule")]
-        public async Task Schedule(IRole team1, IRole team2, [Remainder] string time)
+
+        [Command("validateteam")]
+        public async Task Validate(IRole teamName)
         {
-            await ReplyAsync("Sending dm to captain of " + team2 + " to confirm " + time);
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                var google = new googleSheet();
+                google.TeamName(teamName.ToString());
+                google.Validate(teamName.ToString());
+                await ReplyAsync(teamName.ToString() + " added to ranking");
+            }
+
         }
+        [Command("challenge")]
+        public async Task Challenge(IRole yourteam, IRole opposingTeam)
+        {
+            try
+            {
+                var roleName = opposingTeam.ToString();
+                Console.WriteLine(roleName);
+                //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+
+                string locationOfInput = "challenge";
+                DateTime convertedDate = default;
+                //gets list of users of opposing team
+                var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+                var google = new googleSheet();
+
+
+                //makes sure that there is a pending scheduled match
+
+
+
+
+                //make sure user has correct roles
+                var userUsingCommand = Context.User as SocketGuildUser;
+                var isCaptain = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if ((userUsingCommand.Roles.Contains(yourteam) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin))
+                {
+
+
+                    var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
+                    if (scheduleSheet == null)
+                    {
+                        foreach (var user in listOfUsers)
+                        {
+
+                            var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                            if (user.Roles.Contains(isCaptainOfEnemy))
+                            {
+
+                                var optional = google.Optional(yourteam.ToString(), opposingTeam.ToString());
+                                Console.WriteLine(optional);
+                                var channelb = await user.GetOrCreateDMChannelAsync();
+                                if (optional)
+                                {
+
+
+                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match.");
+                                }
+                                else
+                                {
+                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept.");
+
+
+                                }
+
+
+
+
+                            }
+
+
+                        }
+
+                        await ReplyAsync("A challenge has been issued to " + opposingTeam.ToString());
+                        return;
+                    }
+                    else
+                    {
+                        await ReplyAsync(scheduleSheet);
+                        return;
+                    }
+                }
+                else
+                {
+                    await ReplyAsync("You are not the team captain of the first team in the command " + yourteam.ToString() + " or an admin");
+                    return;
+                }
+
+
+            }
+            catch
+            {
+                await ReplyAsync("something went wrong, please ask for admin help");
+                return;
+            }
+        }
+
+
+        [Command("denychallenge")]
+        public async Task DenyChallenge(IRole yourteam, IRole opposingTeam)
+        {
+            
+            string removeChallenge = "challenge";
+            string typeOfRemove = "challenge";
+
+            DateTime convertedDate = DateTime.Parse("12/30/2020");
+            
+            
+            // time[0] = time[0] + "/20";
+
+
+            var channel = Context.Guild as SocketGuild;
+            //var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+
+            var userThatCalledSchedule = Context.User as SocketGuildUser;
+            var roleName = opposingTeam.ToString();
+            Console.WriteLine(roleName);
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+            var google = new googleSheet();
+
+
+            var rolePermissionAdmin = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            var captainPermission = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+            if (userThatCalledSchedule.Roles.Contains(rolePermissionAdmin) || (userThatCalledSchedule.Roles.Contains(captainPermission) && userThatCalledSchedule.Roles.Contains(yourteam)))
+            {
+                int positionOfYourTeam = 0;
+                int positionOfOpposingTeam = 0;
+                int howManyInListYourTeam = 0;
+                int howManyInListOpposingTeam = 0;
+
+                try
+                {
+                    //makes sure that there is a pending scheduled match
+                    string[] confirmYourTeamChallenge = google.Confirm(yourteam.ToString(), opposingTeam.ToString(), removeChallenge, false);
+                    string[] confirmOpposingTeamChallenge = google.Confirm(yourteam.ToString(), opposingTeam.ToString(), removeChallenge, true);
+                    if (confirmYourTeamChallenge[0] == opposingTeam.ToString())
+                    {
+                        Console.WriteLine("opposing team and confirm[0] are the same");
+                        positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                        positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                        howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                        howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                    }
+                }
+                catch
+                {
+                    await ReplyAsync("Something went wrong, please contatct admins");
+                    return;
+                }
+
+
+
+                var optional = google.OptionalCheck(yourteam.ToString(),positionOfYourTeam, opposingTeam.ToString(), positionOfOpposingTeam);
+                Console.WriteLine(optional);
+                if (optional)
+                {
+
+                    google.RemoveSchedule(yourteam.ToString(), positionOfYourTeam, howManyInListYourTeam, opposingTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                    await ReplyAsync("Denied challenge of " + opposingTeam.ToString());
+                    foreach (var user in listOfUsers)
+                    {
+
+                        var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                        if (user.Roles.Contains(isCaptainOfEnemy))
+                        {
+
+
+                            Console.WriteLine(user.Username + " is a captain");
+
+                            var channelb = await user.GetOrCreateDMChannelAsync();
+
+                            await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has denied your challenge. ");
+                        }
+
+                    }
+                }
+                else
+                {
+                    await ReplyAsync("Challenge is not optional.");
+                }
+
+            }
+        }
+
+
+
+
+        [Command("confirmschedule")]
+        public async Task ConfirmSchedule(IRole yourteam, IRole opposingTeam)
+        {
+
+            string typeOfRemove = "preschedule";
+            string locationOfInput = "confirmedschedule";
+            var roleName = opposingTeam.ToString();
+            Console.WriteLine(roleName);
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+
+
+
+            //gets list of users of opposing team
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+            var google = new googleSheet();
+            //makes sure that there is a pending scheduled match
+            string[] confirmYourTeam = google.Confirm(yourteam.ToString(), opposingTeam.ToString(), locationOfInput, false);
+            string[] confirmOpposingTeam = google.Confirm(yourteam.ToString(), opposingTeam.ToString(), locationOfInput, true);
+
+            //make sure user has correct roles
+            var userUsingCommand = Context.User as SocketGuildUser;
+            var isCaptain = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+            var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if ((userUsingCommand.Roles.Contains(yourteam) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin))
+            {
+
+
+                if (confirmYourTeam[0] == opposingTeam.ToString())
+                {
+                    Console.WriteLine("opposing team and confirm[0] are the same");
+                    int positionOfYourTeam = Int32.Parse(confirmYourTeam[1]);
+                    int positionOfOpposingTeam = Int32.Parse(confirmOpposingTeam[1]);
+                    int howManyInListYourTeam = Int32.Parse(confirmYourTeam[2]);
+                    int howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2]);
+
+                    try
+                    {
+                        Console.WriteLine("made it into trying to schedule");
+                        //gets converted matchdate of opponents
+                        DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+                        var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
+                        if (scheduleSheet == null)
+                        {
+                            google.RemoveSchedule(yourteam.ToString(), positionOfYourTeam, howManyInListYourTeam, opposingTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                            //gets enemy captain and dms them
+                            foreach (var user in listOfUsers)
+                            {
+
+                                var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                                if (user.Roles.Contains(isCaptainOfEnemy))
+                                {
+
+
+                                    Console.WriteLine(user.Username + " is a captain");
+
+                                    var channelb = await user.GetOrCreateDMChannelAsync();
+
+                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " confirmed your match on " + convertedDate + " est/edt.");
+                                }
+
+                            }
+                            await ReplyAsync("Match has been confirmed for " + convertedDate + " est/edt");
+                           var calendar = new googleCalendar();
+                            var timeZone = "America/New_York";
+                            calendar.AddMatch(yourteam.ToString(), opposingTeam.ToString(), convertedDate, timeZone);
+                        }
+
+                        else
+                        {
+                            await ReplyAsync(confirmYourTeam[0]);
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        await ReplyAsync("Something went wrong, please contact admins.");
+                    }
+                }
+                else
+                {
+                    await ReplyAsync("Something went wrong, please contact admins.");
+                }
+
+
+            }
+            else
+            {
+                await ReplyAsync("You are not the team captain of the first team in the command " + yourteam.ToString() + " or an admin");
+            }
+        }
+
+
+        [Command("schedule")]
+        public async Task Schedule(IRole team1, IRole team2, params string[] time)
+        {
+
+            string locationOfInput = "pendingschedule";
+            string removeChallenge = "challenge";
+            string typeOfRemove = "challenge";
+            DateTime scheduledDate = DateTime.Parse("12/30/2020");
+            try
+            {
+                scheduledDate = DateTime.Parse(time[0] + " " + time[1] + " " + time[2]);
+            }
+            catch
+            {
+                await ReplyAsync("Format needs to be dd / mm / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                return;
+            }
+            DateTime convertedDate = DateTime.Parse("12/30/2020");
+           
+            int numAddToDate;
+            // time[0] = time[0] + "/20";
+
+
+            var channel = Context.Guild as SocketGuild;
+            //var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+
+            var userThatCalledSchedule = Context.User as SocketGuildUser;
+            var roleName = team2.ToString();
+            Console.WriteLine(roleName);
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+            var google = new googleSheet();
+
+
+            var rolePermissionAdmin = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            var captainPermission = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+            if (userThatCalledSchedule.Roles.Contains(rolePermissionAdmin) || (userThatCalledSchedule.Roles.Contains(captainPermission) && userThatCalledSchedule.Roles.Contains(team1)))
+            {
+                int positionOfYourTeam = 0;
+                int positionOfOpposingTeam = 0;
+                int howManyInListYourTeam = 0;
+                int howManyInListOpposingTeam = 0;
+                Console.Write("is admin");
+                try
+                {
+                    //makes sure that there is a pending scheduled match
+                    string[] confirmYourTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, false);
+                    string[] confirmOpposingTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, true);
+                    if (confirmYourTeamChallenge[0] == team2.ToString())
+                    {
+                        Console.WriteLine("opposing team and confirm[0] are the same");
+                         positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                         positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                         howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                         howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                    }
+                }
+                catch
+                {
+                    await ReplyAsync("Something went wrong, please contatct admins");
+                    return;
+                }
+
+                
+
+
+
+                google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+
+                Console.WriteLine("list of users " + listOfUsers);
+
+                if (time[3].ToLower() == "pst" || time[3].ToLower() == "pdt")
+                {
+                    convertedDate = scheduledDate.AddHours(3);
+                    Console.WriteLine("back 3 hours");
+                    numAddToDate = 3;
+                }
+                else if (time[3].ToLower() == "mst" || time[3].ToLower() == "mdt")
+                {
+                    convertedDate = scheduledDate.AddHours(2);
+                    Console.WriteLine("Back two hours");
+                    numAddToDate = 2;
+                }
+                else if (time[3].ToLower() == "cst" || time[3].ToLower() == "cdt")
+                {
+                    convertedDate = scheduledDate.AddHours(1);
+                    Console.WriteLine("Back one hour");
+                    numAddToDate = 1;
+                }
+                else if (time[3].ToLower() == "est" || time[3].ToLower() == "edt")
+                {
+                    Console.WriteLine("current Time");
+                    convertedDate = scheduledDate;
+                    numAddToDate = 0;
+                }
+                else
+                {
+                    await ReplyAsync("Did not specify timezone using 'pst/pdt','mst,mdt','cst,cdt','est,edt'");
+                    return;
+                }
+
+                Console.WriteLine("converted date" + convertedDate);
+                Console.WriteLine("scheduled date " + scheduledDate);
+
+
+                var scheduleSheet = google.Schedule(team1.ToString(), team2.ToString(), convertedDate, locationOfInput);
+                if (scheduleSheet == null)
+                {
+                    foreach (var user in listOfUsers)
+                    {
+
+                        var isCaptain = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                        if (user.Roles.Contains(isCaptain))
+                        {
+
+                            await ReplyAsync("Sent dm for confirmation to of schedule to " + user.Username);
+                            Console.WriteLine(user.Username + " is a captain");
+
+                            var channelb = await user.GetOrCreateDMChannelAsync();
+
+                            await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " from " + team1.ToString() + " has attempted to schedule a match with your team on " + convertedDate + " est/edt. \n Please use !confirmschedule @" + team2.ToString() + " @" + team1 + " in botcommands or your teamchannel to confirm the schedule.");
+                        }
+                        Console.WriteLine("in for each" + user);
+
+                    }
+                    await ReplyAsync("Sending dm to captain of " + team2 + " to confirm time");
+                }
+                else
+                {
+                    await ReplyAsync(scheduleSheet);
+                    return;
+                }
+            }
+            else
+            {
+                await ReplyAsync("You are not the captain of the first team " + team1.ToString() + " or and admin.");
+            }
+        }
+                
+
+            
+        
+    
+ 
+
 
         [Command("sheet")]
 
@@ -61,15 +487,53 @@ namespace DiscordBotApp.Modules
         public async Task nameSheet(IRole team)
         {
 
-            var user = Context.User as SocketGuildUser;
-            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            if (user.Roles.Contains(rolePermissionAdmin))
+            var channel = Context.Guild as SocketGuild;
+            //var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+
+            var admin = Context.User as SocketGuildUser;
+            var roleName = team.ToString();
+            Console.WriteLine(roleName);
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+
+
+            Console.WriteLine("list of users " + listOfUsers);
+
+            var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            if (admin.Roles.Contains(rolePermissionAdmin))
             {
-                Console.WriteLine("before googlesheet");
-                var google = new googleSheet();
-                
-                google.CreateTeam(team.ToString());
-                await ReplyAsync("Google sheet named");
+                Console.Write("is admin");
+
+                foreach (var user in listOfUsers)
+                {
+
+                    var isCaptain = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                    if (user.Roles.Contains(isCaptain))
+                    {
+
+                        Console.WriteLine(user.Username + " is a captain");
+                        await ReplyAsync("captain found");
+                        var channelb = await user.GetOrCreateDMChannelAsync();
+
+                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " has attempted to schedule a match with your team on ");
+                    }
+                    Console.WriteLine("in for each" + user);
+                    
+                    /*try
+                    {
+                        var channelb = await user.GetOrCreateDMChannelAsync();
+
+                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
+                        
+                    }
+
+                    catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                    {
+                        Console.WriteLine($"Boo, I cannot message {user}.");
+                        await ReplyAsync($"I cannot message {user}");
+                        continue;
+                    }*/
+                }
             }
 
         }
@@ -947,7 +1411,7 @@ namespace DiscordBotApp.Modules
 
             var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
-            //checks if role admin or owner
+            //checks if role admin or owner or teamcaptain of team
             if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(team))))
             {
                 if (role == "top")
@@ -1156,7 +1620,7 @@ namespace DiscordBotApp.Modules
                                     await calledUser.AddRoleAsync(team);
                                 }
 
-                                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm);
+                                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the addtoteam command to add " + calledUser + " with ign of " + confirm + "for the role  " + role);
                             }
                             catch
                             {

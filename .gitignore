@@ -355,3 +355,4 @@ DiscordBotApp/App.config
 DiscordBotApp/credentials.json
 DiscordBotApp\bin\Debug\netcoreapp3.1/token.json
 DiscordBotApp\bin\Debug\netcoreapp3.1/credentials.json
+DiscordBotApp/credentialsCalendar.json

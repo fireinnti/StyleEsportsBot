@@ -28,9 +28,926 @@ namespace DiscordBotApp
             static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 
-            public void InputElo(string teamName, int elo)
+            public void Validate(string teamName)
+            {
+
+                Console.WriteLine("made it into inputelo");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+                // Define request parameters.
+                string formula = $"='{teamName}'!B2";
+                string formulaRank = $"='{teamName}'!B3";
+
+                var formularString = new List<object>() { formula, formulaRank };
+                
+                string range = $"Live Ratings!H2:I2";
+
+
+
+
+
+
+                // Data.UpdateValuesResponse response = await request.ExecuteAsync();
+
+                SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum)2;  // TODO: Update placeholder value.
+
+                // How the input data should be inserted.
+                SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum insertDataOption = (SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum)1;  // TODO: Update placeholder value.
+
+                // TODO: Assign values to desired properties of `requestBody`:
+                Data.ValueRange requestBody = new Data.ValueRange();
+                requestBody.Values = new List<IList<object>> { formularString };
+
+
+                SpreadsheetsResource.ValuesResource.AppendRequest request = service.Spreadsheets.Values.Append(requestBody, googleSheetUrl, range);
+                request.ValueInputOption = valueInputOption;
+                request.InsertDataOption = insertDataOption;
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.AppendValuesResponse response = request.Execute();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+
+            }
+            public string[,] MoveUpList(string teamName, int howManyOnList, int start , string locationOfMove)
             {
                 Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+
+
+                // Define request parameters.
+
+                string moveInformationRange = null;
+                if(locationOfMove == "challenge")
+                {
+                    moveInformationRange = $"{teamName}!H{start + 9}:I{howManyOnList - start + 10}";
+                }
+                else if(locationOfMove == "preschedule")
+                {
+                    moveInformationRange = $"{teamName}!H{start + 15}:I{howManyOnList - start + 16}";
+
+                }
+
+                
+                
+
+
+                List<string> ranges = new List<string>();
+                
+                ranges.Add(moveInformationRange);
+                
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    
+
+
+                    var valuesOfMain = data[0].Values;
+                    
+                    
+                    
+                    if (valuesOfMain != null && valuesOfMain.Count > 0)
+                    {
+
+                        
+                        string[,] teamArray = new string[howManyOnList,2];
+                        
+
+
+                            int num = 0;
+                            foreach (var row in valuesOfMain)
+                            {
+
+                                // Print columns A and E, which correspond to indices 0 and 4.
+                                Console.WriteLine("Main roster{0}, {1}", row[0], row[1]);
+                                teamArray[num, 0] = row[0].ToString();
+                                teamArray[num, 1] = row[1].ToString();
+                                
+                                num++;
+
+
+                            }
+                            Console.WriteLine("sending" + valuesOfMain);
+                            Console.WriteLine(teamArray[0, 0]);
+
+                            return teamArray;
+                        }
+                    
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    return null;
+                }
+                return null;
+
+            }
+
+            public void RemoveSchedule(string teamName, int teamPosition, int lengthOfTeamList, string opponentName, int opponentPosition, int lengthOfOpponentList, string typeOfRemove)
+            {
+                
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+                Console.WriteLine("made it past sheets");
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                //ranges of the teams that will need removal.
+                string yourTeamRange = null;
+                string opponentTeamRange = null;
+                string yourTeamListLengthName = null;
+                string yourTeamListLengthBehindName = null;
+                string yourOpponentTeamListLengthName = null;
+                string yourOpponentTeamListLengthBehindName = null;
+                //checks type of removal
+                if (typeOfRemove == "preschedule")
+                {
+                    yourTeamRange = $"{teamName}!H{teamPosition + 15}:I{teamPosition + 15}";
+                    opponentTeamRange = $"{opponentName}!H{opponentPosition + 15}:I{opponentPosition + 15}";
+                    yourTeamListLengthName = $"{teamName}!H16:I16";
+                    yourTeamListLengthBehindName = $"{teamName}!H{lengthOfTeamList + 15}:I{lengthOfTeamList + 15}";
+                    yourOpponentTeamListLengthName = $"{opponentName}!H16:I16";
+                    yourOpponentTeamListLengthBehindName = $"{opponentName}!H{lengthOfOpponentList + 15}:I{lengthOfOpponentList + 15}";
+                }
+                else if(typeOfRemove == "challenge")
+                {
+                    yourTeamRange = $"{teamName}!H{teamPosition + 9}:I{teamPosition + 9}";
+                    opponentTeamRange = $"{opponentName}!H{opponentPosition + 9}:I{opponentPosition + 9}";
+                    yourTeamListLengthName = $"{teamName}!H10:I10";
+                    yourTeamListLengthBehindName = $"{teamName}!H{lengthOfTeamList + 9}:I{lengthOfTeamList + 9}";
+                    yourOpponentTeamListLengthName = $"{opponentName}!H10:I10";
+                    yourOpponentTeamListLengthBehindName = $"{opponentName}!H{lengthOfOpponentList + 9}:I{lengthOfOpponentList  + 9}";
+                }
+                string[,] infoYourTeam = null;
+                string[,] infoOpponentTeam = null;
+                if (lengthOfTeamList > 1)
+                {
+                    infoYourTeam = MoveUpList(teamName, lengthOfTeamList, teamPosition, typeOfRemove);
+                }
+                if(lengthOfOpponentList > 1)
+                {
+                    infoOpponentTeam = MoveUpList(opponentName, lengthOfOpponentList, opponentPosition, typeOfRemove);
+                }
+
+             
+                string valueInputOption = "RAW";
+
+
+
+
+                int numOfRows = 0;
+
+
+                var yourTeamList = new string[] { "", "" };
+                var opponentTeamList = new string[] { "", "" };
+                var moveUpList = new string[] { "", "" };
+                var moveUpListOpponent = new string[] { "", "" };
+
+
+
+                List<Data.ValueRange> data = new List<Data.ValueRange>();
+                data.Add(new Data.ValueRange() { Range = yourTeamRange, Values = new List<IList<object>> { yourTeamList } });
+                data.Add(new Data.ValueRange() { Range = opponentTeamRange, Values = new List<IList<object>> { opponentTeamList} });
+
+                //checks if it needs to move up the list
+                if (lengthOfTeamList > 1)
+                {
+                    moveUpList[0] = infoYourTeam[lengthOfTeamList-1, 0].ToString();
+                    moveUpList[1] = infoYourTeam[lengthOfTeamList-1, 1].ToString();
+                    
+                        data.Add(new Data.ValueRange() { Range = yourTeamListLengthName, Values = new List<IList<object>> { moveUpList } });
+
+                    
+                    data.Add(new Data.ValueRange() { Range = yourTeamListLengthBehindName, Values = new List<IList<object>> { yourTeamList } });
+                }
+                if(lengthOfOpponentList > 1)
+                {
+                    moveUpListOpponent[0] = infoOpponentTeam[lengthOfOpponentList-1, 0].ToString();
+                    moveUpListOpponent[1] = infoOpponentTeam[lengthOfOpponentList-1, 1].ToString();
+                    data.Add(new Data.ValueRange() { Range = yourOpponentTeamListLengthName, Values = new List<IList<object>> { moveUpListOpponent } });
+
+                    
+                    data.Add(new Data.ValueRange() { Range = yourOpponentTeamListLengthBehindName, Values = new List<IList<object>> { opponentTeamList } });
+                }
+                
+
+
+
+                Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
+                requestBody.ValueInputOption = valueInputOption;
+                requestBody.Data = data;
+
+                SpreadsheetsResource.ValuesResource.BatchUpdateRequest request = service.Spreadsheets.Values.BatchUpdate(requestBody, googleSheetUrl);
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.BatchUpdateValuesResponse response = request.Execute();
+                // Data.BatchUpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+
+                
+                /* else
+                 {
+                     Console.WriteLine("No data found.");
+
+                 }*/
+            }
+            public string[] Confirm(string teamName, string opponentName, string locationOfInput, bool switchTeam)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // changes which team to remove from.
+                string currentTeam = null ;
+                string opposingTeam = null ;
+                if (!switchTeam)
+                {
+                    currentTeam = teamName;
+                    opposingTeam = opponentName;
+                }else
+                {
+                    currentTeam = opponentName;
+                    opposingTeam = teamName;
+                }
+                string range = null;
+                if (locationOfInput == "confirmedschedule")
+                {
+                    range = $"{currentTeam}!H16:H25";
+                }
+                else if (locationOfInput == "challenge")
+                {
+                    range = $"{currentTeam}!H10:H12";
+                }
+                else if (locationOfInput == "confirmedmatch")
+                {
+                    range = $"{currentTeam}!E16:E25";
+                }
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                //for sending back information
+                string[] teamArray = new string[3];
+                int numberOfTeams = 0;
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
+
+                    if (values != null && values.Count > 0)
+                    {
+
+                        foreach ( var team in values) {
+                            numberOfTeams++;
+                            
+                            Console.WriteLine("sending number of matches from confirm" + values.Count);
+                            if (team[0].ToString() == opposingTeam)
+                            {
+                                Console.WriteLine("made it into if");
+                                teamArray[0] = team[0].ToString();
+                                teamArray[1] = numberOfTeams.ToString();
+                                Console.WriteLine(teamArray[0] + " " + teamArray[1]);
+                                
+                            }
+                           
+                        }
+                        teamArray[2] = numberOfTeams.ToString();
+                        return teamArray;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    teamArray[0] = "Given team is not listed on your teams, challenge, pending schedule, or upcoming matchs";
+                    return teamArray;
+                }
+                teamArray[0] = "Given team is not listed on your teams, challenge, pending schedule, or upcoming matchs";
+                return teamArray;
+            }
+            //getting matchdate for pending schedule or result
+            public DateTime GetMatchDate(string teamName, bool isResult, int position)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // Define request parameters.
+
+                string range = $"{teamName}!I{15 + position}";
+                if (isResult)
+                {
+                    range = $"{teamName}!F{15 + position}";
+                }
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                // gets time of match
+                
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
+
+                foreach (var row in values)
+                {
+                    Console.WriteLine(row[0]);
+                    return DateTime.Parse(row[0].ToString());
+
+                }
+                return DateTime.Parse("");
+            }
+
+
+            public bool Optional(string teamName, string opponentName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                
+
+
+                // Define request parameters.
+                
+                string rangeForEloOfTeam = $"{teamName}!B3";
+                string rangeForEloOfOpponent = $"{opponentName}!B3";
+                
+
+
+                List<string> ranges = new List<string>();
+                ranges.Add(rangeForEloOfTeam);
+                ranges.Add(rangeForEloOfOpponent);
+                
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    var rangeOfYourTeam = data[0].Values[0];
+                    var rangeOfEnemyTeam = data[1].Values[0];
+                    Console.WriteLine(rangeOfYourTeam[0].ToString() + rangeOfEnemyTeam[0].ToString());
+
+                    int challenger = Int32.Parse(rangeOfYourTeam[0].ToString());
+                    int challenged = Int32.Parse(rangeOfEnemyTeam[0].ToString());
+                    
+                    if(challenger >= (challenged-200) && challenger <= (challenged+100))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                    
+                    
+                   
+
+                }
+                catch
+                {
+
+                }
+                return false;
+            }
+            //checks if yes or no for oppitional when trying to deny challenge
+            public bool OptionalCheck(string teamName, int positionOfTeam, string opponentName, int positionOfOpponent)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+
+
+                // Define request parameters.
+
+                string rangeOfYourOption = $"{teamName}!I{positionOfTeam + 9}";
+                string rangeOfOpponentOption = $"{opponentName}!I{positionOfOpponent + 9}";
+
+
+
+                List<string> ranges = new List<string>();
+                ranges.Add(rangeOfYourOption);
+                ranges.Add(rangeOfOpponentOption);
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    var opitionOfYourTeam = data[0].Values[0];
+                    var opitionOfEnemyTeam = data[1].Values[0];
+                    
+
+                    string opYourTeam = opitionOfYourTeam[0].ToString();
+                    string opOpponentTeam = opitionOfEnemyTeam[0].ToString();
+
+                    if (opYourTeam == "Y" && opOpponentTeam == "Y")
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                    
+
+                   
+
+                }
+                catch
+                {
+
+                }
+                return false;
+            }
+
+
+            //method used to issue challenge, create pending schedule, or move to scheduled match
+            public string Schedule(string teamName, string opponentName, DateTime pendingSchedule, string locationOfInput)
+            {
+                Console.WriteLine("made it into PendingSchedule");
+                
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+                Console.WriteLine("made it past sheets");
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                //names of teams
+                string rangeForTeamName1 = $"{teamName}!H16";
+                string rangeForTeamName2 = $"{opponentName}!H16";
+                int numberOfScheduledGamesTeam1 = CheckScheduleCount(teamName, locationOfInput);
+                int numberOfScheduledGamesTeam2 = CheckScheduleCount(opponentName, locationOfInput);
+                //checks if over 10 matches in pending or scheduled and stops from scheduling
+                if (numberOfScheduledGamesTeam1 >= 10 )
+                {
+                    if (locationOfInput == "confirmedschedule") {
+                        return teamName + " has over 10 games in their scheduled matches, please wait to schedule until one has finished.";
+                     }
+                    else if(locationOfInput == "pendingschedule")
+                    {
+                        return teamName + " has over 10 games in their pending schedule, please wait to schedule until they have confirmed matches.";
+                    }
+                }
+                if ( numberOfScheduledGamesTeam2 >= 10)
+                {
+                    if (locationOfInput == "confirmedschedule")
+                    {
+                        return opponentName + " has over 10 games in their scheduled matches, please wait to schedule until one has finished.";
+                    }
+                    else if (locationOfInput == "pendingschedule")
+                    {
+                        return opponentName + " has over 10 games in their pending schedule, please wait to schedule until they have confirmed matches.";
+                    }
+                }
+                if(locationOfInput == "challenge")
+                {
+                    if(numberOfScheduledGamesTeam1 >= 3)
+                    {
+                        return teamName + " has 3 pending challenges, please confirm or deny a challenge before challenging more";
+                    }
+                    else if(numberOfScheduledGamesTeam2 >= 3)
+                    {
+                        return opponentName + " has 3 pending challenges, they need to confirm or deny a challenge before challenging more";
+                    }
+                }
+                // Defines if pending or scheduled matches
+
+                if (locationOfInput == "confirmedschedule")
+                {
+                    rangeForTeamName1 = $"{teamName}!E{numberOfScheduledGamesTeam1 + 16}";
+                    rangeForTeamName2 = $"{opponentName}!E{numberOfScheduledGamesTeam2 + 16}";
+                }
+                else if( locationOfInput == "pendingschedule")
+                {
+                    rangeForTeamName1 = $"{teamName}!H{numberOfScheduledGamesTeam1 + 16}";
+                    rangeForTeamName2 = $"{opponentName}!H{numberOfScheduledGamesTeam2 + 16}";
+                }
+                else if (locationOfInput == "challenge")
+                {
+                    rangeForTeamName1 =  $"{teamName}!H{numberOfScheduledGamesTeam1 + 10}";
+                    rangeForTeamName2 =  $"{opponentName}!H{numberOfScheduledGamesTeam2 + 10}";
+                }
+
+                //getting schedule
+                string rangeForScheduleDateTeam1 = $"{teamName}!I16";
+                string rangeForScheduleDateTeam2 = $"{opponentName}!I16";
+
+                //changes where the schedule is going
+                if (locationOfInput == "confirmedschedule")
+                {
+                    rangeForScheduleDateTeam1 = $"{teamName}!F{numberOfScheduledGamesTeam1 + 16}";
+                    rangeForScheduleDateTeam2 = $"{opponentName}!F{numberOfScheduledGamesTeam2 + 16}";
+                }
+                else if(locationOfInput == "pendingschedule")
+                {
+                    rangeForScheduleDateTeam1 = $"{teamName}!I{numberOfScheduledGamesTeam1 + 16}";
+                    rangeForScheduleDateTeam2 = $"{opponentName}!I{numberOfScheduledGamesTeam2 + 16}";
+                }
+                else if (locationOfInput == "challenge")
+                {
+                    rangeForScheduleDateTeam1 = $"{teamName}!I{numberOfScheduledGamesTeam1 + 10}";
+                    rangeForScheduleDateTeam2 = $"{opponentName}!I{numberOfScheduledGamesTeam2 + 10}";
+                }
+               
+                // Define request parameters.
+
+                string valueInputOption = "RAW";
+
+                
+
+                var teamList = new string[] { teamName };
+                var opponentList = new string[] { opponentName };
+                var scheduledDate = new string[] { pendingSchedule.ToString() };
+
+
+                // checks if challenge is optional or not optional
+                bool optional = Optional(teamName, opponentName);
+                string[] optionalList = null;
+                if (optional)
+                {
+                    optionalList = new string[] { "N" };
+                }
+                else
+                {
+                    optionalList = new string[] { "Y" };
+                }
+
+                
+
+                List<Data.ValueRange> data = new List<Data.ValueRange>();
+                data.Add(new Data.ValueRange() { Range = rangeForTeamName1, Values = new List<IList<object>> { opponentList } });
+                data.Add(new Data.ValueRange() { Range = rangeForTeamName2, Values = new List<IList<object>> { teamList } });
+                if (locationOfInput == "challenge")
+                {
+                    data.Add(new Data.ValueRange() { Range = rangeForScheduleDateTeam1, Values = new List<IList<object>> { optionalList } });
+                    data.Add(new Data.ValueRange() { Range = rangeForScheduleDateTeam2, Values = new List<IList<object>> { optionalList } });
+                }
+                else if( locationOfInput == "confirmedschedule" || locationOfInput == "pendingschedule")
+                {
+                    data.Add(new Data.ValueRange() { Range = rangeForScheduleDateTeam1, Values = new List<IList<object>> { scheduledDate } });
+                    data.Add(new Data.ValueRange() { Range = rangeForScheduleDateTeam2, Values = new List<IList<object>> { scheduledDate } });
+                }
+
+
+
+                Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
+                requestBody.ValueInputOption = valueInputOption;
+                requestBody.Data = data;
+
+                SpreadsheetsResource.ValuesResource.BatchUpdateRequest request = service.Spreadsheets.Values.BatchUpdate(requestBody, googleSheetUrl);
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.BatchUpdateValuesResponse response = request.Execute();
+                // Data.BatchUpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+
+                return null;
+                /* else
+                 {
+                     Console.WriteLine("No data found.");
+
+                 }*/
+                // Console.Read();
+            }
+
+            public int CheckScheduleCount(string teamName, string locationOfInput)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                // Define request parameters.
+
+                string range = null;
+                if (locationOfInput == "confirmedschedule")
+                {
+                    range = $"{teamName}!E16:E25";
+                }
+                else if (locationOfInput == "pendingschedule")
+                {
+                    range = $"{teamName}!H16:H25";
+                }
+                else if(locationOfInput == "challenge")
+                {
+                    range = $"{teamName}!H10:H12";
+                }
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                        service.Spreadsheets.Values.Get(googleSheetUrl, range);
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    ValueRange response = request.Execute();
+                    IList<IList<Object>> values = response.Values;
+
+                    if (values != null && values.Count > 0)
+                    {
+
+
+
+                        Console.WriteLine("sending number of matches" + values.Count);
+
+                        return values.Count;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("No data found.");
+                    return 0;
+                }
+                return 0;
+
+            }
+
+            public void InputElo(string teamName, int elo)
+            {
+                Console.WriteLine("made it into inputelo");
                 UserCredential credential;
 
                 using (var stream =
