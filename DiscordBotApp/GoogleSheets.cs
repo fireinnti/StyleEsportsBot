@@ -28,6 +28,172 @@ namespace DiscordBotApp
             static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 
+
+            public double[] GetElo(string teamName, string opponentName) {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+
+
+                // Define request parameters.
+
+                string rangeForEloOfTeam = $"{teamName}!B3";
+                string rangeForEloOfOpponent = $"{opponentName}!B3";
+
+
+
+                List<string> ranges = new List<string>();
+                ranges.Add(rangeForEloOfTeam);
+                ranges.Add(rangeForEloOfOpponent);
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
+                double[] teams = new double[2];
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    var rangeOfYourTeam = data[0].Values[0];
+                    var rangeOfEnemyTeam = data[1].Values[0];
+                    Console.WriteLine(rangeOfYourTeam[0].ToString() + rangeOfEnemyTeam[0].ToString());
+
+                    double challenger = Double.Parse(rangeOfYourTeam[0].ToString());
+                    double challenged = Double.Parse(rangeOfEnemyTeam[0].ToString());
+
+                    teams[0] = challenger;
+                    teams[1] = challenged;
+                    return teams;
+                
+                }catch{
+                    return null;
+                }
+            }
+            //adds match result to googlesheet
+            public void MatchResult(string teamName, string opponentName, string result, string schedule, string[] links, double plusMinus)
+            {
+
+                Console.WriteLine("made it into matchresult");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+                // Define request parameters.
+                string versusCell = $"Vs {opponentName}";
+                string resultCell = $"{result}";
+                string gameDateCell = $"{schedule}";
+                string []gameLinks = links;
+                
+                   
+                
+                var dataBeingInserted = new List<object>() { versusCell, resultCell, gameDateCell, gameLinks[0], gameLinks[1], gameLinks[2], plusMinus.ToString() };
+                
+
+
+
+                string range = $"{teamName}!A58:G58";
+
+               
+                
+
+
+
+
+
+
+                // Data.UpdateValuesResponse response = await request.ExecuteAsync();
+
+                SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum valueInputOption = (SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum)1;  // TODO: Update placeholder value.
+
+                // How the input data should be inserted.
+                SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum insertDataOption = (SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum)1;  // TODO: Update placeholder value.
+
+                // TODO: Assign values to desired properties of `requestBody`:
+                Data.ValueRange requestBody = new Data.ValueRange();
+                requestBody.Values = new List<IList<object>> { dataBeingInserted };
+                
+
+
+                SpreadsheetsResource.ValuesResource.AppendRequest request = service.Spreadsheets.Values.Append(requestBody, googleSheetUrl, range);
+                request.ValueInputOption = valueInputOption;
+                request.InsertDataOption = insertDataOption;
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.AppendValuesResponse response = request.Execute();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response.ToString()));
+
+            }
+
+            //inputs elo into ladder
             public void Validate(string teamName)
             {
 
@@ -138,12 +304,16 @@ namespace DiscordBotApp
                 string moveInformationRange = null;
                 if(locationOfMove == "challenge")
                 {
-                    moveInformationRange = $"{teamName}!H{start + 9}:I{howManyOnList - start + 10}";
+                    moveInformationRange = $"{teamName}!H{start + 9}:I{howManyOnList + 9}";
                 }
                 else if(locationOfMove == "preschedule")
                 {
-                    moveInformationRange = $"{teamName}!H{start + 15}:I{howManyOnList - start + 16}";
+                    moveInformationRange = $"{teamName}!H{start + 15}:I{howManyOnList + 15}";
 
+                }
+                else if(locationOfMove == "confirmedmatch")
+                {
+                    moveInformationRange = $"{teamName}!E{start + 15}:F{howManyOnList + 15}";
                 }
 
                 
@@ -253,36 +423,45 @@ namespace DiscordBotApp
                 //ranges of the teams that will need removal.
                 string yourTeamRange = null;
                 string opponentTeamRange = null;
-                string yourTeamListLengthName = null;
+               // string yourTeamListLengthName = null;
                 string yourTeamListLengthBehindName = null;
-                string yourOpponentTeamListLengthName = null;
+                //string yourOpponentTeamListLengthName = null;
                 string yourOpponentTeamListLengthBehindName = null;
                 //checks type of removal
                 if (typeOfRemove == "preschedule")
                 {
                     yourTeamRange = $"{teamName}!H{teamPosition + 15}:I{teamPosition + 15}";
                     opponentTeamRange = $"{opponentName}!H{opponentPosition + 15}:I{opponentPosition + 15}";
-                    yourTeamListLengthName = $"{teamName}!H16:I16";
+                    //yourTeamListLengthName = $"{teamName}!H16:I16";
                     yourTeamListLengthBehindName = $"{teamName}!H{lengthOfTeamList + 15}:I{lengthOfTeamList + 15}";
-                    yourOpponentTeamListLengthName = $"{opponentName}!H16:I16";
+                    //yourOpponentTeamListLengthName = $"{opponentName}!H{:I16";
                     yourOpponentTeamListLengthBehindName = $"{opponentName}!H{lengthOfOpponentList + 15}:I{lengthOfOpponentList + 15}";
                 }
                 else if(typeOfRemove == "challenge")
                 {
                     yourTeamRange = $"{teamName}!H{teamPosition + 9}:I{teamPosition + 9}";
                     opponentTeamRange = $"{opponentName}!H{opponentPosition + 9}:I{opponentPosition + 9}";
-                    yourTeamListLengthName = $"{teamName}!H10:I10";
+                    //yourTeamListLengthName = $"{teamName}!H10:I10";
                     yourTeamListLengthBehindName = $"{teamName}!H{lengthOfTeamList + 9}:I{lengthOfTeamList + 9}";
-                    yourOpponentTeamListLengthName = $"{opponentName}!H10:I10";
+                   // yourOpponentTeamListLengthName = $"{opponentName}!H10:I10";
                     yourOpponentTeamListLengthBehindName = $"{opponentName}!H{lengthOfOpponentList + 9}:I{lengthOfOpponentList  + 9}";
+                }
+                else if (typeOfRemove == "confirmedmatch")
+                {
+                    yourTeamRange = $"{teamName}!E{teamPosition + 15}:F{teamPosition + 15}";
+                    opponentTeamRange = $"{opponentName}!E{opponentPosition + 15}:F{opponentPosition + 15}";
+                    //yourTeamListLengthName = $"{teamName}!H10:I10";
+                    yourTeamListLengthBehindName = $"{teamName}!E{lengthOfTeamList + 15}:F{lengthOfTeamList + 15}";
+                    // yourOpponentTeamListLengthName = $"{opponentName}!H10:I10";
+                    yourOpponentTeamListLengthBehindName = $"{opponentName}!E{lengthOfOpponentList + 15}:F{lengthOfOpponentList + 15}";
                 }
                 string[,] infoYourTeam = null;
                 string[,] infoOpponentTeam = null;
-                if (lengthOfTeamList > 1)
+                if (lengthOfTeamList > 1 && lengthOfTeamList != teamPosition)
                 {
                     infoYourTeam = MoveUpList(teamName, lengthOfTeamList, teamPosition, typeOfRemove);
                 }
-                if(lengthOfOpponentList > 1)
+                if(lengthOfOpponentList > 1 && lengthOfOpponentList != opponentPosition)
                 {
                     infoOpponentTeam = MoveUpList(opponentName, lengthOfOpponentList, opponentPosition, typeOfRemove);
                 }
@@ -293,7 +472,7 @@ namespace DiscordBotApp
 
 
 
-                int numOfRows = 0;
+                
 
 
                 var yourTeamList = new string[] { "", "" };
@@ -308,21 +487,21 @@ namespace DiscordBotApp
                 data.Add(new Data.ValueRange() { Range = opponentTeamRange, Values = new List<IList<object>> { opponentTeamList} });
 
                 //checks if it needs to move up the list
-                if (lengthOfTeamList > 1)
+                if (lengthOfTeamList > 1 && lengthOfTeamList != teamPosition)
                 {
-                    moveUpList[0] = infoYourTeam[lengthOfTeamList-1, 0].ToString();
-                    moveUpList[1] = infoYourTeam[lengthOfTeamList-1, 1].ToString();
+                    moveUpList[0] = infoYourTeam[lengthOfTeamList - teamPosition, 0].ToString();
+                    moveUpList[1] = infoYourTeam[lengthOfTeamList - teamPosition, 1].ToString();
                     
-                        data.Add(new Data.ValueRange() { Range = yourTeamListLengthName, Values = new List<IList<object>> { moveUpList } });
+                        data.Add(new Data.ValueRange() { Range = yourTeamRange, Values = new List<IList<object>> { moveUpList } });
 
                     
                     data.Add(new Data.ValueRange() { Range = yourTeamListLengthBehindName, Values = new List<IList<object>> { yourTeamList } });
                 }
-                if(lengthOfOpponentList > 1)
+                if(lengthOfOpponentList > 1 && lengthOfOpponentList != opponentPosition)
                 {
-                    moveUpListOpponent[0] = infoOpponentTeam[lengthOfOpponentList-1, 0].ToString();
-                    moveUpListOpponent[1] = infoOpponentTeam[lengthOfOpponentList-1, 1].ToString();
-                    data.Add(new Data.ValueRange() { Range = yourOpponentTeamListLengthName, Values = new List<IList<object>> { moveUpListOpponent } });
+                    moveUpListOpponent[0] = infoOpponentTeam[lengthOfOpponentList-opponentPosition, 0].ToString();
+                    moveUpListOpponent[1] = infoOpponentTeam[lengthOfOpponentList-opponentPosition, 1].ToString();
+                    data.Add(new Data.ValueRange() { Range = opponentTeamRange, Values = new List<IList<object>> { moveUpListOpponent } });
 
                     
                     data.Add(new Data.ValueRange() { Range = yourOpponentTeamListLengthBehindName, Values = new List<IList<object>> { opponentTeamList } });
@@ -440,6 +619,11 @@ namespace DiscordBotApp
                         teamArray[2] = numberOfTeams.ToString();
                         return teamArray;
                     }
+                    else
+                    {
+                        teamArray[0] = "Given team is not listed on your teams, challenge, pending schedule, or upcoming matchs";
+                        return teamArray;
+                    }
                 }
                 catch
                 {
@@ -447,8 +631,7 @@ namespace DiscordBotApp
                     teamArray[0] = "Given team is not listed on your teams, challenge, pending schedule, or upcoming matchs";
                     return teamArray;
                 }
-                teamArray[0] = "Given team is not listed on your teams, challenge, pending schedule, or upcoming matchs";
-                return teamArray;
+                
             }
             //getting matchdate for pending schedule or result
             public DateTime GetMatchDate(string teamName, bool isResult, int position)
@@ -506,7 +689,7 @@ namespace DiscordBotApp
                 return DateTime.Parse("");
             }
 
-
+            //checks if game is optional by the two given teams based on elo
             public bool Optional(string teamName, string opponentName)
             {
                 Console.WriteLine("made it");
@@ -737,7 +920,7 @@ namespace DiscordBotApp
                 int numberOfScheduledGamesTeam1 = CheckScheduleCount(teamName, locationOfInput);
                 int numberOfScheduledGamesTeam2 = CheckScheduleCount(opponentName, locationOfInput);
                 //checks if over 10 matches in pending or scheduled and stops from scheduling
-                if (numberOfScheduledGamesTeam1 >= 10 )
+                if (numberOfScheduledGamesTeam1 >= 10)
                 {
                     if (locationOfInput == "confirmedschedule") {
                         return teamName + " has over 10 games in their scheduled matches, please wait to schedule until one has finished.";
@@ -945,7 +1128,7 @@ namespace DiscordBotApp
 
             }
 
-            public void InputElo(string teamName, int elo)
+            public void InputElo(string teamName, double elo)
             {
                 Console.WriteLine("made it into inputelo");
                 UserCredential credential;

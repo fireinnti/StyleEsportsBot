@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Discord.Addons.Interactive;
 
+
 namespace DiscordBotApp
 {
 
@@ -51,9 +52,10 @@ namespace DiscordBotApp
             var config = new DiscordSocketConfig
             {
                 AlwaysDownloadUsers = true,
-                MessageCacheSize = 100
+                MessageCacheSize = 100,
             };
             var client = new DiscordSocketClient(config);
+            
 
 
 

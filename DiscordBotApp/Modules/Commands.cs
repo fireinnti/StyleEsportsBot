@@ -26,6 +26,10 @@ using RiotNet.Models;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             if (user.Roles.Contains(rolePermissionAdmin)){
 */
+/* how to log
+ * var channel = Context.Guild as SocketGuild;
+            //var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+*/
 
 namespace DiscordBotApp.Modules
 
@@ -65,11 +69,11 @@ namespace DiscordBotApp.Modules
                 var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
                 var google = new googleSheet();
 
-
+                string listOfCaptains = "";
                 //makes sure that there is a pending scheduled match
 
 
-
+                var channel = Context.Guild as SocketGuild;
 
                 //make sure user has correct roles
                 var userUsingCommand = Context.User as SocketGuildUser;
@@ -82,25 +86,29 @@ namespace DiscordBotApp.Modules
                     var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
                     if (scheduleSheet == null)
                     {
+                        //checks if match is opitional
+                        var optional = google.Optional(yourteam.ToString(), opposingTeam.ToString());
                         foreach (var user in listOfUsers)
                         {
-
+                            
                             var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
                             if (user.Roles.Contains(isCaptainOfEnemy))
                             {
-
-                                var optional = google.Optional(yourteam.ToString(), opposingTeam.ToString());
+                                listOfCaptains = listOfCaptains + user.Mention+ " ";
+                                
                                 Console.WriteLine(optional);
                                 var channelb = await user.GetOrCreateDMChannelAsync();
                                 if (optional)
                                 {
 
-
-                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match.");
+                                    
+                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match. After picking out a date for the match" +
+                                     " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)" );
                                 }
                                 else
                                 {
-                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept.");
+                                    await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept. After picking out a date for the match" +
+                                     " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)" );
 
 
                                 }
@@ -112,8 +120,18 @@ namespace DiscordBotApp.Modules
 
 
                         }
+                        if (optional)
+                        {
 
-                        await ReplyAsync("A challenge has been issued to " + opposingTeam.ToString());
+                            await ReplyAsync("An optional challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
+                                     " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                        }
+                        else
+                        {
+                            await ReplyAsync("A nonoptional challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
+                                     " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                        }
+                        var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the challenge command to challenge " + opposingTeam.ToString() + " with their team " + yourteam.ToString()); ;
                         return;
                     }
                     else
@@ -183,6 +201,7 @@ namespace DiscordBotApp.Modules
                         positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
                         howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
                         howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+
                     }
                 }
                 catch
@@ -213,6 +232,9 @@ namespace DiscordBotApp.Modules
                             var channelb = await user.GetOrCreateDMChannelAsync();
 
                             await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " has denied your challenge. ");
+                            await ReplyAsync("Challenge deleted");
+
+                            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the denychallenge command for " + opposingTeam.ToString()); ;
                         }
 
                     }
@@ -238,7 +260,7 @@ namespace DiscordBotApp.Modules
             Console.WriteLine(roleName);
             //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
 
-
+            var channel = Context.Guild as SocketGuild;
 
             //gets list of users of opposing team
             var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
@@ -293,6 +315,7 @@ namespace DiscordBotApp.Modules
                            var calendar = new googleCalendar();
                             var timeZone = "America/New_York";
                             calendar.AddMatch(yourteam.ToString(), opposingTeam.ToString(), convertedDate, timeZone);
+                            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the confirm schedule command to confirm the match between " + yourteam.ToString() + " and " + opposingTeam.ToString() + " at " + convertedDate);
                         }
 
                         else
@@ -334,17 +357,17 @@ namespace DiscordBotApp.Modules
             }
             catch
             {
-                await ReplyAsync("Format needs to be dd / mm / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                await ReplyAsync("Format needs to be mm/ dd / yy HH:MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                 return;
             }
             DateTime convertedDate = DateTime.Parse("12/30/2020");
            
-            int numAddToDate;
+            int numAddToDate = 0;
             // time[0] = time[0] + "/20";
 
 
             var channel = Context.Guild as SocketGuild;
-            //var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
+            
 
             var userThatCalledSchedule = Context.User as SocketGuildUser;
             var roleName = team2.ToString();
@@ -376,10 +399,14 @@ namespace DiscordBotApp.Modules
                          howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
                          howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
                     }
+                    else {
+                        await ReplyAsync("Team not in challenge list.");
+                        return;
+                    }
                 }
                 catch
                 {
-                    await ReplyAsync("Something went wrong, please contatct admins");
+                    await ReplyAsync("Something went wrong, please contact admins");
                     return;
                 }
 
@@ -387,7 +414,7 @@ namespace DiscordBotApp.Modules
 
 
 
-                google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                
 
                 Console.WriteLine("list of users " + listOfUsers);
 
@@ -428,6 +455,7 @@ namespace DiscordBotApp.Modules
                 var scheduleSheet = google.Schedule(team1.ToString(), team2.ToString(), convertedDate, locationOfInput);
                 if (scheduleSheet == null)
                 {
+                    google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
                     foreach (var user in listOfUsers)
                     {
 
@@ -435,7 +463,7 @@ namespace DiscordBotApp.Modules
                         if (user.Roles.Contains(isCaptain))
                         {
 
-                            await ReplyAsync("Sent dm for confirmation to of schedule to " + user.Username);
+                            await ReplyAsync("Sent dm for confirmation of schedule to " + user.Username);
                             Console.WriteLine(user.Username + " is a captain");
 
                             var channelb = await user.GetOrCreateDMChannelAsync();
@@ -446,6 +474,7 @@ namespace DiscordBotApp.Modules
 
                     }
                     await ReplyAsync("Sending dm to captain of " + team2 + " to confirm time");
+                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the schedule command for " + team1.ToString() + " versus " + team2.ToString() + " at " + convertedDate);
                 }
                 else
                 {
@@ -842,28 +871,157 @@ namespace DiscordBotApp.Modules
 
          }*/
 
-        [Command("result")]
-        public async Task Result(IRole team1, IRole team2, [Remainder] string win)
+        [Command("result", RunMode = RunMode.Async)]
+        public async Task Result(IRole team, IRole opponentTeam, string result, params string[]links)
         {
-            await ReplyAsync(team1 + " has beat " + team2 + "with a record of " + win + ". Is this correct? 'yes' or 'no'");
 
+            var user = Context.User as SocketGuildUser;
+            var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+
+            var channel = Context.Guild as SocketGuild;
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used result command ");
+
+            await ReplyAsync("Just to verify " + team + " beat " + opponentTeam + " by " + result + "? Please reply with 'yes' or 'no'");
             var response = await NextMessageAsync();
-            if (response != null)
+            if(response.ToString().ToLower() == "yes")
             {
-                if(response.ToString().ToLower() == "yes")
+
+            }
+            else
+            {
+                return;
+            }
+
+            //add blank string if less than 3 links
+            if(links.Length < 3)
+            {
+                links[2] = "";
+            }
+            if (user.Roles.Contains(rolePermissionAdmin))
+            {
+                //these are ran opposite for both teams, i.e. times to run win is added to loss for second team and times to run lose is added to the second team's win.
+                int timesToRunWin = 0;
+                int timesToRunLose = 0;
+                var google = new googleSheet();
+                double[] teams = google.GetElo(team.ToString(), opponentTeam.ToString());
+                Console.WriteLine(teams);
+                switch (result)
                 {
-                    await ReplyAsync("Thanks, sending to other team captain to confirm result");
-                }
-                else if(response.ToString().ToLower() == "no")
-                {
-                    await ReplyAsync("Please try again");
+                    case "2-0":
+                        timesToRunWin = 2;
+
+                        break;
+                    case "2-1":
+                        timesToRunWin = 2;
+                        timesToRunLose = 1;
+                        break;
+                    case "1-2":
+                        timesToRunWin = 1;
+                        timesToRunLose = 2;
+                        break;
+                    case "0-2":
+                        timesToRunLose = 2;
+                        break;
+                    default:
+                        await ReplyAsync("Incorrect format or amount of games, can be 2-1, 2-0, 1-2, 0-2");
+                        return;
 
                 }
-                else
+
+
+                if (teams != null)
                 {
-                    await ReplyAsync("Please respond yes or no when confirming, please try again.");
+                    Console.WriteLine("Made it into teams not null");
+                    double firstElo = teams[0];
+                    double secondElo = teams[1];
+
+
+
+
+                    double transformedFirstElo = Math.Pow(10, (firstElo / 400));
+                    double transformedSecondElo = Math.Pow(10, (secondElo / 400));
+
+                    double formulaFirstElo = transformedFirstElo / (transformedFirstElo + transformedSecondElo);
+                    double formulaSecondElo = transformedSecondElo / (transformedFirstElo + transformedSecondElo);
+
+
+                    int howBigOfEloSwing = 40;
+
+
+
+
+                    double firstEloCalculatedIfWin = firstElo + howBigOfEloSwing * (1 - formulaFirstElo);
+                    double firstEloCalculatedIfLose = firstElo + howBigOfEloSwing * (0 - formulaFirstElo);
+                    double secondEloCalculatedIfWin = secondElo + howBigOfEloSwing * (1 - formulaSecondElo);
+                    double secondEloCalculatedIfLose = secondElo + howBigOfEloSwing * (0 - formulaSecondElo);
+
+                    //get information of elo going up and down for both teams
+                    firstEloCalculatedIfWin = Math.Round(firstEloCalculatedIfWin - firstElo, 1);
+                    firstEloCalculatedIfLose = Math.Round(firstEloCalculatedIfLose - firstElo, 1);
+                    secondEloCalculatedIfWin = Math.Round(secondEloCalculatedIfWin - secondElo, 1);
+                    secondEloCalculatedIfLose = Math.Round(secondEloCalculatedIfLose - secondElo, 1);
+                    //calculatefinished match for first called team
+                    double finishedEloFirstTeam = Math.Round((firstElo + firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose),1);
+                    //calculatedfinished match for second called team
+                    double finishedEloSecondTeam = Math.Round((secondElo + secondEloCalculatedIfWin * timesToRunLose + firstEloCalculatedIfLose * timesToRunWin),1);
+
+                    double firstTeamChanged = Math.Round((firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose),1);
+                    double secondTeamChanged = Math.Round((secondEloCalculatedIfWin * timesToRunLose + firstEloCalculatedIfLose * timesToRunWin ),1);
+
+
+
+                    var resultOfFirstTeam = timesToRunWin + "-" + timesToRunLose;
+                    var resultOfSecondTeam = timesToRunLose + "-" + timesToRunWin;
+                    
+
+                    Console.WriteLine("Run win command " + timesToRunWin + " and run lose command " + timesToRunLose);
+
+                    int positionOfYourTeam = 0;
+                    int positionOfOpposingTeam = 0;
+                    int howManyInListYourTeam = 0;
+                    int howManyInListOpposingTeam = 0;
+                    Console.Write("is admin");
+                    try
+                    {
+                        string locationOfInput = "confirmedmatch";
+                        //makes sure that there is a pending scheduled match
+                        string[] confirmYourTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, false);
+                        string[] confirmOpposingTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, true);
+                        if (confirmYourTeamChallenge[0] == opponentTeam.ToString())
+                        {
+                            Console.WriteLine("opposing team and confirm[0] are the same");
+                            positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                            positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                            howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                            howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                        }
+                        string convertedDate = google.GetMatchDate(team.ToString(), true, positionOfYourTeam).ToString();
+
+                        
+                        
+                        //for first team
+                        
+                        google.MatchResult(team.ToString(), opponentTeam.ToString(), resultOfFirstTeam.ToString(), convertedDate.ToString(), links, firstTeamChanged);
+                        google.InputElo(team.ToString(), finishedEloFirstTeam);
+                        //for second team
+                        google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), links, secondTeamChanged);
+                        google.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
+
+
+
+                        google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
+                        await ReplyAsync(team.ToString() +"elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
+                    }
+                    catch
+                    {
+                        await ReplyAsync("Something went wrong, please contact the admins");
+                    }
                 }
 
+            }
+            else
+            {
+                await ReplyAsync("You are not an admin.");
             }
         }
 
@@ -925,17 +1083,23 @@ namespace DiscordBotApp.Modules
 
                                                 //full channel team text
                                                 // ulong assignChannelIdTeamText = 622919737365495849;
-                                                ulong assignChannelIdTeamText = 774104289919500298;
+                                                //old id 774104289919500298
+
+                                                ulong assignChannelIdTeamText = 776610278204506162;
 
 
                                                 //full voice channel
                                                 //ulong assignChannelIdTeamVoice = 622919840444841984;
-                                                ulong assignChannelIdTeamVoice = 774104754938052609;
+
+                                                //old id 774104754938052609
+                                                ulong assignChannelIdTeamVoice = 776611013751078954;
 
                                                 //create new channels and assign them under categories
+                                                Console.Write("before channel create");
                                                 var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                                                Console.WriteLine("between text and voice");
                                                 var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
-
+                                                Console.WriteLine("before role create");
                                                 var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
                                                 
                                                 //var everyoneRole = Context.Guild.GetRole(705651653323522121);
@@ -1031,12 +1195,16 @@ namespace DiscordBotApp.Modules
 
                                             //full channel team text
                                             // ulong assignChannelIdTeamText = 622919737365495849;
-                                            ulong assignChannelIdTeamText = 774104289919500298;
+                                            //old id 774104289919500298
+
+                                            ulong assignChannelIdTeamText = 776610278204506162;
 
 
                                             //full voice channel
                                             //ulong assignChannelIdTeamVoice = 622919840444841984;
-                                            ulong assignChannelIdTeamVoice = 774104754938052609;
+
+                                            //old id 774104754938052609
+                                            ulong assignChannelIdTeamVoice = 776611013751078954;
 
                                             //create new channels and assign them under categories
                                             var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
@@ -1117,7 +1285,7 @@ namespace DiscordBotApp.Modules
                     }
                     catch
                     {
-                        await ReplyAsync("Error, please use format !createteam nameofteam (optional name of org) @teamcaptainofteam");
+                        await ReplyAsync("Error, please use format !createteam @teamcaptainofteam nameofteam ");
                     }
 
                 }
@@ -1390,6 +1558,7 @@ namespace DiscordBotApp.Modules
        ("add to team")]
         public async Task addToTeam(IRole team, string role, IGuildUser calledUser)
         {
+
             //holds int for number of subs
             int numberOfSubs = 0;
             //initializes googlesheet
@@ -1399,9 +1568,11 @@ namespace DiscordBotApp.Modules
 
             //check if while loop should run
             bool run = false;
-
-
-            Console.WriteLine("made it into addtoteam");
+            
+            //ulong userId = ulong.Parse(Id[0].ToString());
+           
+            
+            Console.WriteLine(calledUser);
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
 
@@ -1658,7 +1829,7 @@ namespace DiscordBotApp.Modules
             var channel = Context.Guild as SocketGuild;
 
 
-            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the remove command to remove role  " + role + " frome " + removedUser);
+            var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the remove command to remove role  " + role + " from " + removedUser);
 
 
             var user = Context.User as SocketGuildUser;

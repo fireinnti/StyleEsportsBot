@@ -115,23 +115,23 @@ namespace CalendarStyle
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
-            Console.WriteLine("converted " + XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Unspecified));
+            Console.WriteLine("converted " + XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Utc));
             Console.WriteLine("timezone " + timeZone);
             string googleCalendarUrl;
             googleCalendarUrl = ConfigurationManager.AppSettings.Get("googleCalendarUrl");
             Event newEvent = new Event()
             {
                 Summary = team1 + " versus " + team2,
-                Description = "A chance to hear more about Google's developer products.",
+                Description = "A style match between " + team1 + " and " + team2,
                 Start = new EventDateTime()
                 {
-                    DateTime = DateTime.Parse(XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Unspecified)),
+                    DateTime = DateTime.Parse(XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Utc)).AddHours(5),
                     TimeZone = timeZone,
                    
                 },
                 End = new EventDateTime()
                 {
-                    DateTime = DateTime.Parse(XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Unspecified)),
+                    DateTime = DateTime.Parse(XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Utc)).AddHours(5),
                     TimeZone = timeZone,
                 }
 
