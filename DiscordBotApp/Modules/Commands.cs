@@ -123,12 +123,12 @@ namespace DiscordBotApp.Modules
                         if (optional)
                         {
 
-                            await ReplyAsync("An optional challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
+                            await ReplyAsync("A NONOPTIONAL challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
                                      " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                         }
                         else
                         {
-                            await ReplyAsync("A nonoptional challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
+                            await ReplyAsync("An OPTIONAL challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
                                      " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                         }
                         var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the challenge command to challenge " + opposingTeam.ToString() + " with their team " + yourteam.ToString()); ;
@@ -878,24 +878,34 @@ namespace DiscordBotApp.Modules
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
 
+            string[] linksFull = new string[3];
+            linksFull[0] = links[0];
+            linksFull[1] = links[1];
+
             var channel = Context.Guild as SocketGuild;
             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used result command ");
 
             await ReplyAsync("Just to verify " + team + " beat " + opponentTeam + " by " + result + "? Please reply with 'yes' or 'no'");
             var response = await NextMessageAsync();
+            Console.WriteLine(response);
             if(response.ToString().ToLower() == "yes")
             {
-
+                Console.WriteLine("yes if");
             }
             else
             {
+                Console.WriteLine("no if");
                 return;
             }
 
             //add blank string if less than 3 links
             if(links.Length < 3)
             {
-                links[2] = "";
+                linksFull[2] = "";
+            }
+            else
+            {
+                linksFull[2] = links[2];
             }
             if (user.Roles.Contains(rolePermissionAdmin))
             {
@@ -963,10 +973,10 @@ namespace DiscordBotApp.Modules
                     //calculatefinished match for first called team
                     double finishedEloFirstTeam = Math.Round((firstElo + firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose),1);
                     //calculatedfinished match for second called team
-                    double finishedEloSecondTeam = Math.Round((secondElo + secondEloCalculatedIfWin * timesToRunLose + firstEloCalculatedIfLose * timesToRunWin),1);
+                    double finishedEloSecondTeam = Math.Round((secondElo + secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin),1);
 
                     double firstTeamChanged = Math.Round((firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose),1);
-                    double secondTeamChanged = Math.Round((secondEloCalculatedIfWin * timesToRunLose + firstEloCalculatedIfLose * timesToRunWin ),1);
+                    double secondTeamChanged = Math.Round((secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin ),1);
 
 
 
@@ -1001,10 +1011,10 @@ namespace DiscordBotApp.Modules
                         
                         //for first team
                         
-                        google.MatchResult(team.ToString(), opponentTeam.ToString(), resultOfFirstTeam.ToString(), convertedDate.ToString(), links, firstTeamChanged);
+                        google.MatchResult(team.ToString(), opponentTeam.ToString(), resultOfFirstTeam.ToString(), convertedDate.ToString(), linksFull, firstTeamChanged);
                         google.InputElo(team.ToString(), finishedEloFirstTeam);
                         //for second team
-                        google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), links, secondTeamChanged);
+                        google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), linksFull, secondTeamChanged);
                         google.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
 
 

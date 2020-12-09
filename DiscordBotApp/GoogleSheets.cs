@@ -762,8 +762,8 @@ namespace DiscordBotApp
                     var rangeOfEnemyTeam = data[1].Values[0];
                     Console.WriteLine(rangeOfYourTeam[0].ToString() + rangeOfEnemyTeam[0].ToString());
 
-                    int challenger = Int32.Parse(rangeOfYourTeam[0].ToString());
-                    int challenged = Int32.Parse(rangeOfEnemyTeam[0].ToString());
+                    Double challenger = Double.Parse(rangeOfYourTeam[0].ToString());
+                    Double challenged = Double.Parse(rangeOfEnemyTeam[0].ToString());
                     
                     if(challenger >= (challenged-200) && challenger <= (challenged+100))
                     {
