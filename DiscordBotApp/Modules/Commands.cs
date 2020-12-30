@@ -18,6 +18,8 @@ using googleSheet = DiscordBotApp.GoogleSheets.Sheets;
 using googleCalendar = CalendarStyle.GoogleCalendar;
 using RiotNet;
 using RiotNet.Models;
+using MongoDB.Bson;
+using mongo = DiscordBotApp.MongoDB;
 
 
 
@@ -39,6 +41,60 @@ namespace DiscordBotApp.Modules
 
     public class MsgModule : ModuleBase<SocketCommandContext>
     {
+
+        [Command("player")]
+        public async Task Player()
+        {
+            var mongo = new mongo();
+            
+            await ReplyAsync(mongo.player());
+           
+        }
+
+
+        [Command("team")]
+        public async Task Team(IRole teamName)
+        {
+            var mongo = new mongo();
+
+            BsonDocument teamData = mongo.team(teamName.ToString());
+
+            int numCount = 5;
+
+            string[] numberOfPlayers = new string[teamData["Subs"].AsBsonArray.Count() + 5];
+
+            numberOfPlayers[0] = teamData["Top"].ToString();
+            numberOfPlayers[1] = teamData["Jg"].ToString();
+            numberOfPlayers[2] = teamData["Mid"].ToString();
+            numberOfPlayers[3] = teamData["Adc"].ToString();
+            numberOfPlayers[4] = teamData["Sup"].ToString();
+            foreach(var sub in teamData["Subs"].AsBsonArray)
+            {
+                numberOfPlayers[numCount] = sub.ToString();
+                numCount++;
+            }
+
+            
+
+            string[] teamPlayers = mongo.playerLookup(numberOfPlayers);
+            Console.WriteLine(teamPlayers[0].ToString());
+            string fullData = ("Name: " + teamData["TeamName"].ToString() + "\n" + "Elo: "+ teamData["Elo"].ToString() + "\n" + "Season Record: "+ teamData["WinsThisSeason"].ToString() + "/" + teamData["LossesThisSeason"] + "\n" +"Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n");
+
+            if (teamPlayers.Length > 5)
+            {
+                numCount = 1;
+                for (int i = 5; i < teamData["Subs"].AsBsonArray.Count() + 5; i++)
+                {
+                    fullData = fullData + "Sub #" + numCount + " " + teamPlayers[i] + "\n";
+                    numCount++;
+                }
+            }
+            await ReplyAsync(fullData);
+
+            
+
+        }
+
 
         [Command("validateteam")]
         public async Task Validate(IRole teamName)

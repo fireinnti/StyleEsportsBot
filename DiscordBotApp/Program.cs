@@ -8,6 +8,7 @@ using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Discord.Addons.Interactive;
+using MongoDB.Driver;
 
 
 namespace DiscordBotApp
@@ -55,10 +56,9 @@ namespace DiscordBotApp
                 MessageCacheSize = 100,
             };
             var client = new DiscordSocketClient(config);
+
             
-
-
-
+            
             _client.Log += Log;
 
 
