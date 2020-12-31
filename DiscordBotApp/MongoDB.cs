@@ -5,6 +5,7 @@ using System.Text;
 using MongoDB.Driver;
 using MongoDB.Bson;
 using System.Threading.Tasks;
+using player = DiscordBotApp.Modules.Player;
 namespace DiscordBotApp
 {
     class MongoDB
@@ -27,9 +28,35 @@ namespace DiscordBotApp
             return document.ToString();
         }
 
+        public async Task inputPlayer(object player)
+        {
+            //connects to localhost
+            var connectionString = "mongodb://localhost:27017";
+            var client = new MongoClient(connectionString);
+            //applies player object to new object in this task
+
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var collection = database.GetCollection<BsonDocument>("Player");
+            player mongoPlayer = (player)player;
+
+
+            var document = new BsonDocument { { "Ign", mongoPlayer.Ign },
+                { "Rank", mongoPlayer.Rank },
+                {"SummonerId", mongoPlayer.SummonerId },
+                {"CurrentTeam", mongoPlayer.CurrentTeam }
+                
+                
+                
+        };
+            await collection.InsertOneAsync(document);
+
+        }
+
+        //looks up player from database
         public string[] playerLookup(string [] players)
         {
-
+            
             var connectionString = "mongodb://localhost:27017";
 
             string[] listOfPlayers = new string[players.Length];

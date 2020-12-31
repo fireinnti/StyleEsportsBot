@@ -23,8 +23,7 @@ namespace DiscordBotApp
         public class Sheets
         {
 
-            // If modifying these scopes, delete your previously saved credentials
-            // at ~/.credentials/sheets.googleapis.com-dotnet-quickstart.json
+            
             static string[] Scopes = { SheetsService.Scope.Spreadsheets };
             static string ApplicationName = "Style Esports Bot";
 

@@ -37,21 +37,165 @@ namespace DiscordBotApp.Modules
 
 {
 
+    public class Team
+    {
+            
+    
+        public string Top = "";
+        public string Jg = "";
+        public string Mid = "";
+        public string Adc = "";
+        public string Sup = "";
+        public string TeamName = "";
+        public string Elo = "";
+        public Int32 LossesThisSeason = 0;
+        public Int32 TotalLosses = 0;
+        public Int32 TotalWins = 0;
+        public Int32 WinsThisSeason = 1;
+        public List<string> Subs = new List<string>();
+        public List<string> Captain = new List<string>();
+        public List<string> ESubs = new List<string>();
+        public List<string> Staff = new List<string>();
+        public bool Paid = false;
+        public Int32 RequiredGames = 3;
+        public Int32 Challenges = 0;
+        public DateTime TeamLastCheckedForPlayers;
+
+        public string Org = "";
+        public string TeamTextChannel = "";
+        public string TeamVoiceChannel = "";
 
 
-    public class MsgModule : ModuleBase<SocketCommandContext>
+}
+    public class Player
+    {
+        public string Rank = "";
+        public string Ign = "";
+        public string SummonerId = "";
+        public string CurrentTeam = "";
+        public Int32 LossesThisSeason = 0;
+        public Int32 TotalLosses = 0;
+        public Int32 TotalWins = 0;
+        public Int32 WinsThisSeason = 0;
+        public List<string> AltNames = new List<string>();
+        public List<string> PreviousTeams = new List<string>();
+        public string DiscordName = "";
+    }
+
+public class MsgModule : ModuleBase<SocketCommandContext>
     {
 
         [Command("player")]
         public async Task Player()
         {
             var mongo = new mongo();
-            
+
             await ReplyAsync(mongo.player());
-           
+
         }
+        //migrates sheet data to database
+        [Command("Migrate")]
+        public async Task Migrate(IRole teamName)
+        {
+            //gets riotkey from config
+            string riotkey;
+            riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+            var teamNameWithoutNumber = teamName.Name;
+            var google = new googleSheet();
+            int numCount = 0;
+            string[,] values = google.TeamRoster(teamNameWithoutNumber);
+
+            var mongo = new mongo();
+
+            Console.WriteLine(values.Length);
+            //assigning values to object properties for team migration, must go through player creation first to verify players and grab riot id
+           // Player migratePlayer = new Player();
+
+            //for loop to check each player
+            for (int i = 0; i < 10; i++)
+            {
+                Player migratePlayer = new Player();
+                string rankOfIgn;
+                //initiales new riot lib
+                IRiotClient client = new RiotClient(new RiotClientSettings
+                {
+                    ApiKey = riotkey
+                });
+                try
+                {
+                    Summoner summoner = await client.GetSummonerBySummonerNameAsync(values[i,1].ToString(), PlatformId.NA1).ConfigureAwait(false); if (summoner == null)
+                    {
+                        await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
+                        break;
+                    }
+                    else if (summoner != null)
+                    {
+                        List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
+
+                        var loopThruElements = 0;
+                        var rank = lists[loopThruElements];
+                        while (rank.QueueType != "RANKED_SOLO_5x5")
+                        {
+                            loopThruElements++;
+                            rank = lists[loopThruElements];
+                        }
+                        await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " " + summoner.Id);
 
 
+                        //assigns properties to object
+                        migratePlayer.Rank = rank.Tier + " " + rank.Rank;
+                        migratePlayer.Ign = summoner.Name;
+                        migratePlayer.SummonerId = summoner.Id;
+                        migratePlayer.CurrentTeam = teamName.Name;
+
+                        await mongo.inputPlayer(migratePlayer);
+
+                        rankOfIgn = rank.Tier + " " + rank.Rank;
+                    }
+                }
+                catch
+                {
+                    await ReplyAsync("Unfortnately, there isn't a player by that name, or they haven't played ranked this season. Please try again");
+                    break;
+                }
+
+            }
+
+
+
+
+
+            Team migrateTeam = new Team();
+            migrateTeam.Top = values[0,1];
+            migrateTeam.Jg = values[1, 1];
+            migrateTeam.Mid = values[2, 1];
+            migrateTeam.Adc = values[3, 1];
+            migrateTeam.Sup = values[4, 1];
+            //runs for the subs
+            for (int i = 5; i < 10; i++)
+            {
+                try
+                {
+                    if (values[i, 1].ToString() != null)
+                    {
+                        migrateTeam.Subs.Add(values[i, 1].ToString());
+                        numCount++;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine("done with array");
+                }
+
+            }
+            Console.WriteLine(migrateTeam);
+
+            //await mongo.validate();
+            
+            string fullNames = null;
+
+        }
         [Command("team")]
         public async Task Team(IRole teamName)
         {
@@ -89,9 +233,24 @@ namespace DiscordBotApp.Modules
                     numCount++;
                 }
             }
-            await ReplyAsync(fullData);
-
             
+
+            //add all igns into singlestring
+            string stringOfIgns = null;
+            
+            foreach (var row in numberOfPlayers)
+            {
+
+                //await ReplyAsync($"{row[0]}, {row[1]}, {row[2]}");
+
+                
+                    
+                    stringOfIgns = stringOfIgns + row + ",";
+                
+                
+
+            }
+            await ReplyAsync(fullData + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf an op.gg doesn't show up, please contact Admins.");
 
         }
 
@@ -725,7 +884,7 @@ namespace DiscordBotApp.Modules
             //var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
             //if (user.Roles.Contains(rolePermissionAdmin))
             {
-                string[,] teamArray = new string[6, 3];
+                
                 var teamNameWithoutNumber = teamName.Name;
                 var google = new googleSheet();
                 string stringOfIgns = null;
@@ -1076,7 +1235,7 @@ namespace DiscordBotApp.Modules
 
 
                         google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
-                        await ReplyAsync(team.ToString() +"elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
+                        await ReplyAsync(team.ToString() +" elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
                     }
                     catch
                     {
