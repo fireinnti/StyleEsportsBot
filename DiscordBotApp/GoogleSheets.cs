@@ -28,6 +28,85 @@ namespace DiscordBotApp
             static string ApplicationName = "Style Esports Bot";
 
 
+            //gets elo of single team
+            public decimal GetElo(string teamName)
+            {
+                Console.WriteLine("made it");
+                UserCredential credential;
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+
+
+                // Define request parameters.
+
+                string rangeForEloOfTeam = $"{teamName}!B3";
+                
+
+
+
+                List<string> ranges = new List<string>();
+                ranges.Add(rangeForEloOfTeam);
+                
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum valueRenderOption = (SpreadsheetsResource.ValuesResource.BatchGetRequest.ValueRenderOptionEnum)0;
+
+
+                SpreadsheetsResource.ValuesResource.BatchGetRequest request = service.Spreadsheets.Values.BatchGet(googleSheetUrl);
+                request.Ranges = ranges;
+                request.ValueRenderOption = valueRenderOption;
+
+                // Data.BatchGetValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+
+
+                // Prints the names and igns in spreadsheet:
+                try
+                {
+                    Data.BatchGetValuesResponse response = request.Execute();
+                    //IList<IList<Object>> values = response.
+
+                    List<Data.ValueRange> data = (List<ValueRange>)response.ValueRanges;
+
+                    var rangeOfYourTeam = data[0].Values[0];
+                    decimal challenger = Decimal.Parse(rangeOfYourTeam[0].ToString());
+                    return challenger;
+                }
+                catch
+                {
+                    return 0;
+                }
+                
+            }
+
             public double[] GetElo(string teamName, string opponentName) {
                 Console.WriteLine("made it");
                 UserCredential credential;
@@ -196,7 +275,7 @@ namespace DiscordBotApp
             public void Validate(string teamName)
             {
 
-                Console.WriteLine("made it into inputelo");
+                Console.WriteLine("made it into validate");
                 UserCredential credential;
 
                 using (var stream =

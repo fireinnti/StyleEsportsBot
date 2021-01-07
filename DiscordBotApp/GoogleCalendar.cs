@@ -28,7 +28,7 @@ namespace CalendarStyle
             UserCredential credential;
 
             using (var stream =
-                new FileStream("credentialsCalendar.json", FileMode.Open, FileAccess.Read))
+                new FileStream("plzcalendar.json", FileMode.Open, FileAccess.Read))
             {
                 // The file token.json stores the user's access and refresh tokens, and is created
                 // automatically when the authorization flow completes for the first time.
@@ -95,11 +95,11 @@ namespace CalendarStyle
             UserCredential credential;
             Console.WriteLine("made it into add match");
             using (var stream =
-                new FileStream("credentialsCalendar.json", FileMode.Open, FileAccess.Read))
+                new FileStream("plzcalendar.json", FileMode.Open, FileAccess.Read))
             {
                 // The file token.json stores the user's access and refresh tokens, and is created
                 // automatically when the authorization flow completes for the first time.
-                string credPath = "tokenCalendar.json";
+                string credPath = "tokenCalendars.json";
                 credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.Load(stream).Secrets,
                     Scopes,

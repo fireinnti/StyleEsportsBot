@@ -17,11 +17,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="bin\Debug\netcoreapp3.1\" />
     <Folder Include="StoredData\" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="credentialsCalendar.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="plzcalendar.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
