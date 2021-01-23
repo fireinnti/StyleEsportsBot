@@ -21,6 +21,9 @@ using RiotNet.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using mongo = DiscordBotApp.MongoDB;
+using opggScraper = DiscordBotApp.Opggsraper;
+using System.Threading;
+using System.Timers;
 
 
 
@@ -37,6 +40,9 @@ using mongo = DiscordBotApp.MongoDB;
 namespace DiscordBotApp.Modules
 
 {
+
+    
+
     public class Challenges
     {
         public string Challenger = "";
@@ -62,7 +68,7 @@ namespace DiscordBotApp.Modules
         public Int32 LossesThisSeason = 0;
         public Int32 TotalLosses = 0;
         public Int32 TotalWins = 0;
-        public Int32 WinsThisSeason = 1;
+        public Int32 WinsThisSeason = 0;
         public List<string> Subs = new List<string>();
         public List<string> Captain = new List<string>();
         public List<string> ESubs = new List<string>();
@@ -93,12 +99,60 @@ namespace DiscordBotApp.Modules
         public string DiscordName = "";
     }
 
+    public class Matches
+    {
+        public string Challenger = "";
+        public string ChallengerId = "";
+        public string Challengee = "";
+        public string ChallengeeId = "";
+        public string MatchStatus = "";
+        public double ChallengerEloChanged = 0;
+        public double ChallengeeEloChanged = 0;
+        public string Scheduled;
+        public string CalendarId = "";
+        public string Result = "";
+        public List<string> PicsOfGames = new List<string>();
+        public string WhichTeamSchedule = "";
+    
+    }
+
+
 public class MsgModule : ModuleBase<SocketCommandContext>
     {
 
-        
 
+        /*[Command("scrape")]
+        public async Task Scrape()
+        {
+           // opggScraper scraper = new opggScraper();
 
+            await scraper.ScrapeMe();
+
+        }*/
+
+        [Command("captain")]
+        public async Task Captain(IRole opposingTeam)
+        {
+            var roleName = opposingTeam.ToString();
+            Console.WriteLine(roleName);
+            //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+            var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
+            string listOfCaptains = "";
+
+            foreach (var user in listOfUsers)
+            {
+
+                var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                if (user.Roles.Contains(isCaptainOfEnemy))
+                {
+                    listOfCaptains = listOfCaptains + user.Mention + " ";
+
+                    
+
+                }
+            }
+            await ReplyAsync(listOfCaptains);
+        }
 
         [Command("player")]
         public async Task Player()
@@ -124,6 +178,19 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
                 int numCount = 5;
 
+                DateTime lastChecked = teamData["TeamLastCheckedForPlayers"].ToUniversalTime();
+
+                var timeBetweenDays = DateTime.Now - lastChecked;
+
+                bool updateSheet = false;
+
+                if (timeBetweenDays.Days > 2)
+                {
+                    updateSheet = true;
+                    
+
+                }
+
                 string[] numberOfPlayers = new string[teamData["Subs"].AsBsonArray.Count() + 5];
 
                 numberOfPlayers[0] = teamData["Top"].ToString();
@@ -139,9 +206,13 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
 
 
-                string[] teamPlayers = await mongo.playerLookup(numberOfPlayers);
+                string[] teamPlayers = await mongo.playerLookup(numberOfPlayers, updateSheet, teamName.Name);
                 Console.WriteLine(teamPlayers[0].ToString());
-                string fullData = ("Name: " + teamData["TeamName"].ToString() + "\n" + "Elo: " + teamData["Elo"].ToString() + "\n" + "Season Record: " + teamData["WinsThisSeason"].ToString() + "/" + teamData["LossesThisSeason"] + "\n" + "Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n");
+                string fullData = ("Name: " + teamData["TeamName"].ToString() + "\n" + "Elo: " + Math.Round(teamData["Elo"].ToDouble(),1).ToString() + "\n" + "Season Record: " + teamData["WinsThisSeason"].ToString() + "/" + teamData["LossesThisSeason"] + "\n" + "Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n");
+
+                string playerData = "Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n";
+
+                
 
                 if (teamPlayers.Length > 5)
                 {
@@ -149,6 +220,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                     for (int i = 5; i < teamData["Subs"].AsBsonArray.Count() + 5; i++)
                     {
                         fullData = fullData + "Sub #" + numCount + " " + teamPlayers[i] + "\n";
+                        playerData = playerData + "Sub #" + numCount + " " + teamPlayers[i] + "\n";
                         numCount++;
                     }
                 }
@@ -169,7 +241,51 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
 
                 }
-                await ReplyAsync(fullData + "\nhttps://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns) + "\nIf an op.gg doesn't show up, please contact Admins.");
+
+                var hyperLink = "https://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns);
+               
+                var exampleAuthor = new EmbedAuthorBuilder()
+            .WithName("TeamCard")
+
+            .WithIconUrl("https://cdn.discordapp.com/attachments/643609428012040202/798093546178740224/GG_transparent.png");
+
+                var exampleField = new EmbedFieldBuilder()
+                        .WithName("Name")
+                        .WithValue(teamData["TeamName"].ToString())
+                        .WithIsInline(true);
+                var otherField = new EmbedFieldBuilder()
+                        .WithName("Elo")
+                        .WithValue(Math.Round(teamData["Elo"].ToDouble(), 1).ToString())
+                        .WithIsInline(false);
+                var winLossField = new EmbedFieldBuilder()
+                        .WithName("Season Record")
+                        .WithValue(teamData["WinsThisSeason"].ToString() + "/" + teamData["LossesThisSeason"])
+                        .WithIsInline(false);
+                var playerField = new EmbedFieldBuilder()
+                        .WithName("Players")
+                        .WithValue(playerData)
+                        .WithIsInline(false);
+                var multiField = new EmbedFieldBuilder()
+                    .WithName("Multi.OPGG")
+                        .WithValue($"[Link]({hyperLink})")
+                        .WithIsInline(false);
+                //var exampleFooter = new EmbedFooterBuilder()
+                       // .WithText($"sdf[Multi.opgg link]({hyperLink})")
+                      //  .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
+                var embed = new EmbedBuilder()
+                        .AddField(exampleField)
+                        .AddField(otherField)
+                        .AddField(winLossField)
+                       .AddField(playerField)
+                       .AddField(multiField)
+                        .WithAuthor(exampleAuthor);
+                        
+                        
+
+                await ReplyAsync("", false, embed.Build());
+
+
+               // await ReplyAsync(fullData + "\n" + hyperLink + "\nIf an op.gg doesn't show up, please contact Admins.");
             }
             catch
             {
@@ -201,7 +317,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
             try
             {
                 var mongo = new MongoDB();
-                string mongoMessage;
+                
                 var roleName = opposingTeam.ToString();
                 Console.WriteLine(roleName);
                 //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
@@ -334,6 +450,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
             
             string removeChallenge = "challenge";
             string typeOfRemove = "challenge";
+            MongoDB mongo = new MongoDB();
 
             DateTime convertedDate = DateTime.Parse("12/30/2020");
             
@@ -356,7 +473,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
             var captainPermission = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
             if (userThatCalledSchedule.Roles.Contains(rolePermissionAdmin) || (userThatCalledSchedule.Roles.Contains(captainPermission) && userThatCalledSchedule.Roles.Contains(yourteam)))
             {
-                int positionOfYourTeam = 0;
+               int positionOfYourTeam = 0;
                 int positionOfOpposingTeam = 0;
                 int howManyInListYourTeam = 0;
                 int howManyInListOpposingTeam = 0;
@@ -384,7 +501,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
 
 
-                var optional = google.OptionalCheck(yourteam.ToString(),positionOfYourTeam, opposingTeam.ToString(), positionOfOpposingTeam);
+                bool optional = await mongo.DeleteChallenge(yourteam.Name, opposingTeam.Name);
                 Console.WriteLine(optional);
                 if (optional)
                 {
@@ -426,6 +543,8 @@ public class MsgModule : ModuleBase<SocketCommandContext>
         public async Task ConfirmSchedule(IRole yourteam, IRole opposingTeam)
         {
 
+            MongoDB mongo = new MongoDB();
+
             string typeOfRemove = "preschedule";
             string locationOfInput = "confirmedschedule";
             var roleName = opposingTeam.ToString();
@@ -462,19 +581,22 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                         Console.WriteLine("made it into trying to schedule");
                         //gets converted matchdate of opponents
                         DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
-                        DateTime stopper = DateTime.Parse("01/11/2021");
-                        int resultDate = DateTime.Compare(convertedDate, stopper);
+                        //DateTime stopper = DateTime.Parse("01/11/2021");
+                       /* int resultDate = DateTime.Compare(convertedDate, stopper);
                         if(resultDate > 0)
                         {
                             await ReplyAsync("Won't schedule past the tenth, using that night to migrate matches and challenges to database.");
                             return;
-                        }
+                        }*/
+
+                        
+
                         var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
                         if (scheduleSheet == null)
                         {
                             google.RemoveSchedule(yourteam.ToString(), positionOfYourTeam, howManyInListYourTeam, opposingTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
                             //gets enemy captain and dms them
-                            foreach (var user in listOfUsers)
+                           foreach (var user in listOfUsers)
                             {
 
                                 var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
@@ -490,10 +612,22 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                                 }
 
                             }
-                            await ReplyAsync("Match has been confirmed for " + convertedDate + " est/edt");
-                           var calendar = new googleCalendar();
+                            
+
+                            var confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, "");
+                            if (confirmMong) {
+                                await ReplyAsync("Match has been confirmed for " + convertedDate + " est/edt");
+                                var calendar = new googleCalendar();
                             var timeZone = "America/New_York";
-                            calendar.AddMatch(yourteam.ToString(), opposingTeam.ToString(), convertedDate, timeZone);
+                            string id = calendar.AddMatch(yourteam.ToString(), opposingTeam.ToString(), convertedDate, timeZone);
+
+                                confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, id);
+
+                            }
+                            else
+                            {
+                                await ReplyAsync("You are the team that scheduled, please have other team confirm");
+                            }
                             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the confirm schedule command to confirm the match between " + yourteam.ToString() + " and " + opposingTeam.ToString() + " at " + convertedDate);
                         }
 
@@ -525,6 +659,11 @@ public class MsgModule : ModuleBase<SocketCommandContext>
         [Command("schedule")]
         public async Task Schedule(IRole team1, IRole team2, params string[] time)
         {
+
+
+            MongoDB mongo = new MongoDB();
+
+            Matches match = new Matches();
 
             string locationOfInput = "pendingschedule";
             string removeChallenge = "challenge";
@@ -567,22 +706,29 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                 Console.Write("is admin");
                 try
                 {
-                    //makes sure that there is a pending scheduled match
+                    //makes sure that there is a pending scheduled match with mongo and 
+                    match = await mongo.GetChallengeDetails(team1.Name, team2.Name);
+                    match.WhichTeamSchedule = team1.ToString();
+                    match.MatchStatus = locationOfInput;
+
+
                     string[] confirmYourTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, false);
                     string[] confirmOpposingTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, true);
                     if (confirmYourTeamChallenge[0] == team2.ToString())
                     {
                         Console.WriteLine("opposing team and confirm[0] are the same");
-                         positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
-                         positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
-                         howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
-                         howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                        positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                        positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                        howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                        howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
                     }
-                    else {
+                    else
+                    {
                         await ReplyAsync("Team not in challenge list.");
                         return;
                     }
                 }
+
                 catch
                 {
                     await ReplyAsync("Something went wrong, please contact admins");
@@ -630,6 +776,17 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                 Console.WriteLine("converted date" + convertedDate);
                 Console.WriteLine("scheduled date " + scheduledDate);
 
+
+
+                match.Scheduled = convertedDate.ToString();
+
+                bool mongoSchedule = await mongo.Schedule(match);
+
+                if (!mongoSchedule)
+                {
+                    await ReplyAsync("Failed to insert schedule into database.");
+                    return;
+                }
 
                 var scheduleSheet = google.Schedule(team1.ToString(), team2.ToString(), convertedDate, locationOfInput);
                 if (scheduleSheet == null)
@@ -1048,8 +1205,11 @@ public class MsgModule : ModuleBase<SocketCommandContext>
         [Command("result", RunMode = RunMode.Async)]
         public async Task Result(IRole team, IRole opponentTeam, string result, params string[]links)
         {
-            await ReplyAsync("moving things to database, results aren't ready yet");
-            /*
+            MongoDB mongo = new MongoDB();
+            Team mongoTeam = new Team();
+            Matches mongoMatch = new Matches();
+
+
             var user = Context.User as SocketGuildUser;
             var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
 
@@ -1192,6 +1352,14 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                         google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), linksFull, secondTeamChanged);
                         google.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
 
+                        //adding match details
+                        await mongo.InputElo(team.ToString(), finishedEloFirstTeam);
+                        await mongo.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
+
+
+                        await mongo.AddResults(team.ToString(), timesToRunWin, timesToRunLose);
+                        await mongo.AddResults(opponentTeam.ToString(), timesToRunLose, timesToRunWin);
+
 
 
                         google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
@@ -1207,7 +1375,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
             else
             {
                 await ReplyAsync("You are not an admin.");
-            }*/
+            }
         }
 
         //test how much you would win
@@ -1434,9 +1602,26 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
                                                 if (response.ToString().ToLower() == "yes")
                                                 {
+                                                    List<string> captain = new List<string>();
+                                                    captain.Add(calledUser.ToString());
                                                     var google = new googleSheet();
                                                     var run = google.CreateTeam(teamNameBeingCreated);
-                                                    await ReplyAsync("Google sheet created.");
+                                                    //creates team in database as well
+                                                    MongoDB mongo = new MongoDB();
+                                                    Team team = new Team();
+                                                    team.TeamName = teamNameBeingCreated;
+                                                    team.TeamTextChannel = createTextChannel.Id.ToString();
+                                                    team.TeamVoiceChannel = createVoiceChannel.Id.ToString();
+                                                    team.Captain = captain;
+
+                                                    await mongo.inputTeam(team);
+
+                                                    await ReplyAsync("Google sheet created and team inserted into database.");
+
+                                                    var adminHelpChannel = channel.GetTextChannel(777718412470255626);
+                                                    await createTextChannel.SendMessageAsync("Hello " + calledUser.Mention + " this is your new text channel for your team " + createdRole.Mention + ". \n To start adding players to your team, use the !add " +
+                                                        createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
+
                                                 }
                                                 else if (response.ToString().ToLower() == "no")
                                                 {
@@ -1523,7 +1708,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
 
 
-
+                                            
 
                                             await calledUser.AddRoleAsync(createdRole);
                                             await calledUser.AddRoleAsync(captainRole);
@@ -1533,9 +1718,25 @@ public class MsgModule : ModuleBase<SocketCommandContext>
 
                                             if (response.ToString().ToLower() == "yes")
                                             {
+                                                List<string> captain = new List<string>();
+                                                captain.Add(calledUser.ToString());
                                                 var google = new googleSheet();
                                                 var run = google.CreateTeam(teamNameBeingCreated);
-                                                await ReplyAsync("Google sheet created.");
+                                                //creates team in database as well
+                                                MongoDB mongo = new MongoDB();
+                                                Team team = new Team();
+                                                team.TeamName = teamNameBeingCreated;
+                                                team.TeamTextChannel = createTextChannel.Id.ToString();
+                                                team.TeamVoiceChannel = createVoiceChannel.Id.ToString();
+                                                team.Captain = captain;
+
+
+                                                await mongo.inputTeam(team);
+                                                await ReplyAsync("Google sheet created and team inserted into database.");
+
+                                                var adminHelpChannel = channel.GetTextChannel(777718412470255626);
+                                                await createTextChannel.SendMessageAsync("Hello " + calledUser.Mention + " this is your new text channel for your team " + createdRole.Mention + ". \n To start adding players to your team, use the !add " +
+                                                        createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
                                             }
                                             else if (response.ToString().ToLower() == "no")
                                             {
@@ -1586,53 +1787,78 @@ public class MsgModule : ModuleBase<SocketCommandContext>
             }
 
         }
-        [Command("checkign")]
-        public async Task CheckIgn([Remainder]string ign)
+        //[Command("checkign")]
+        public async Task<string[]> CheckIgn(string accountId)
         {
             string riotkey;
             riotkey = ConfigurationManager.AppSettings.Get("riotkey");
-
-            //string of combine summoner rank
-            string rankOfIgn = null;
-
             IRiotClient client = new RiotClient(new RiotClientSettings
             {
                 ApiKey = riotkey
             });
+            string[] playerArray = new string[2];
+            Player mongoPlayer = new Player();
+            var mongo = new MongoDB();
             try
             {
-                Summoner summoner = await client.GetSummonerBySummonerNameAsync(ign, PlatformId.NA1).ConfigureAwait(true);
-                Console.WriteLine(summoner.Name);
-                Console.WriteLine(summoner);
+                Summoner summoner = await client.GetSummonerBySummonerIdAsync(accountId, PlatformId.NA1).ConfigureAwait(false);
                 if (summoner == null)
                 {
                     await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
-                    return;
+                    return null;
                 }
                 else if (summoner != null)
                 {
-                    Console.WriteLine("made it here fam");
-                    Console.WriteLine(summoner.Id.ToString());
-                    List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(true);
-                    var loopThruElements = 0;
-                    var rank = lists[loopThruElements];
-
-                    //making sure to pull the right rank
-                    while (rank.QueueType != "RANKED_SOLO_5x5")
+                    mongoPlayer.SummonerId = accountId;
+                    List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
+                    if (lists.Count() != 0)
                     {
-                        Console.WriteLine("made it into while " + loopThruElements + 1);
-                        loopThruElements++;
-                        rank = lists[loopThruElements];
+                        var loopThruElements = 0;
+                        var rank = lists[loopThruElements];
+                        while (rank.QueueType != "RANKED_SOLO_5x5")
+                        {
+                            loopThruElements++;
+                            rank = lists[loopThruElements];
+                        }
+
+
+                        //await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                        Console.WriteLine("what");
+                        mongoPlayer.Rank = rank.Tier + " " + rank.Rank;
+                        mongoPlayer.Ign = summoner.Name.ToLower();
+                       
+                       
+                        
+                        
                     }
-                    await ReplyAsync("this is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
-                    rankOfIgn = rank.Tier + " " + rank.Rank;
+                    else
+                    {
+                        return null;
+                    }
+
                 }
+                var insert = await mongo.inputPlayer(mongoPlayer, true);
+                playerArray[0] = mongoPlayer.Ign;
+                playerArray[1] = mongoPlayer.Rank;
+                return playerArray;
             }
             catch
             {
-                await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again");
-                return;
+                //await ReplyAsync("Unfortnately, there isn't a player by that name, or they haven't played ranked this season. Please try again");
+                return null;
             }
+
+
+            //await ReplyAsync("Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
+
+
+            //Console.WriteLine(data);
+
+
+
+
+            return null;
+            
         }
         [Command("elo")]
         public async Task CalculateElo(IRole team)
@@ -1835,10 +2061,200 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                 
                 google.InputElo(team.ToString(), totalElo);
                 await ReplyAsync(team + " has the starting elo of " + totalElo + "\n Added to googlesheet");
+                MongoDB mongo = new MongoDB();
+                bool working = await mongo.InputElo(team.ToString(), totalElo);
+                if (working)
+                {
+                    Console.WriteLine("added elo");
+
+                }
+                else
+                {
+                    await ReplyAsync("did not add to database correctly, make sure this team is in database.");
+                }
 
             }
 
             }
+        //updates rank of team every hour
+        [Command("ranklist")]
+       
+      
+        public async Task updateRanks()
+        {
+            
+            
+            MongoDB mongo = new MongoDB();
+
+            string[]ranks = await mongo.GetRanks();
+
+            var channel = Context.Guild;
+            
+            var embedBuilder = new EmbedBuilder();
+            var messageSender = channel.GetTextChannel(798058859536056391);
+            
+
+            try
+            {
+                var messages = await channel.GetTextChannel(798058859536056391).GetMessagesAsync(1).FlattenAsync();
+                var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+                await (messageSender as ITextChannel).DeleteMessagesAsync(filteredMessages);
+            }
+            catch
+            {
+                Console.WriteLine("nothing to delete");
+            }
+
+
+            /*  
+
+              // Download X messages starting from Context.Message, which means
+              // that it won't delete the message used to invoke this command.
+              var messagess = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, 1).FlattenAsync();
+
+              // Note:
+              // FlattenAsync() might show up as a compiler error, because it's
+              // named differently on stable and nightly versions of Discord.Net.
+              // - Discord.Net 1.x: Flatten()
+              // - Discord.Net 2.x: FlattenAsync()
+
+              // Ensure that the messages aren't older than 14 days,
+              // because trying to bulk delete messages older than that
+              // will result in a bad request.
+              var filteredMessages = messagess.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+
+              // Get the total amount of messages.
+              var count = filteredMessages.Count();
+
+              // Check if there are any messages to delete.
+              if (count == 0)
+                  await ReplyAsync("Nothing to delete.");
+
+              else
+              {
+                  // The cast here isn't needed if you're using Discord.Net 1.x,
+                  // but I'd recommend leaving it as it's what's required on 2.x, so
+                  // if you decide to update you won't have to change this line.
+                  await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
+                  await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
+
+
+      */
+            
+            var exampleAuthor = new EmbedAuthorBuilder()
+        .WithName("Live Style Ranks")
+
+        .WithIconUrl("https://cdn.discordapp.com/attachments/643609428012040202/798093546178740224/GG_transparent.png");
+                var exampleFooter = new EmbedFooterBuilder()
+                        .WithText("Updated Every Hour")
+                        .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
+                var exampleField = new EmbedFieldBuilder()
+                        .WithName("Name Of Teams")
+                        .WithValue(ranks[0].ToString())
+                        .WithIsInline(true);
+                var otherField = new EmbedFieldBuilder()
+                        .WithName("Elo")
+                        .WithValue(ranks[1].ToString())
+                        .WithIsInline(true);
+            var embed = new EmbedBuilder()
+                    .AddField(exampleField)
+                    .AddField(otherField)
+                    .WithAuthor(exampleAuthor)
+                    .WithFooter(exampleFooter);
+
+            await messageSender.SendMessageAsync("", false, embed.Build());
+
+            //it (messages as SocketUserMessage).ModifyAsync(x => { x.Content = ranks.ToString(); x.Embed = embedBuilder.Build(); });
+
+
+
+            
+        }
+        //gets elo range around team
+        [Command("teamrange")]
+        public async Task teamEloRange(IRole team)
+        {
+            Console.WriteLine("made it in");
+            MongoDB mongo = new MongoDB();
+            try
+            {
+                await ReplyAsync(await mongo.teamEloRange(team.Name));
+            }
+            catch
+            {
+                await ReplyAsync("team has either not been rated for elo, or does not exist in the database.");
+            }
+        }
+
+
+        public async Task<string> checkifRealRank(string rank)
+        {
+            
+
+            switch (rank)
+            {
+                case "CHALLENGER":
+                    return "CHALLENGER";
+
+
+                case "GRANDMASTER":
+                    return "GRANDMASTER";
+                case "MASTER":
+                    return "MASTER";
+                case "DIAMOND 1":
+                    return "DIAMOND I";
+                case "DIAMOND 2":
+                    return "DIAMOND II";
+                case "DIAMOND 3":
+                    return "DIAMOND III";
+                case "DIAMOND 4":
+                    return "DIAMOND IV";
+                case "PLATINUM 1":
+                    return "PLATINUM I";
+                case "PLATINUM 2":
+                    return "PLATINUM II";
+                case "PLATINUM 3":
+                    return "PLATINUM III";
+                case "PLATINUM 4":
+                    return "PLATINUM IV";
+                case "GOLD 1":
+                    return "GOLD I";
+                case "GOLD 2":
+                    return "GOLD II";
+                case "GOLD 3":
+                    return "GOLD III";
+                case "GOLD 4":
+                    return "GOLD IV";
+                case "SILVER 1":
+                    return "SILVER I";
+                case "SILVER 2":
+                    return "SILVER II";
+                case "SILVER 3":
+                    return "SILVER III";
+                case "SILVER 4":
+                    return "SILVER IV";
+                case "BRONZE 1":
+                    return "BRONZE I";
+                case "BRONZE 2":
+                    return "BRONZE II";
+                case "BRONZE 3":
+                    return "BRONZE III";
+                case "BRONZE 4":
+                    return "BRONZE IV";
+                case "IRON 1":
+                    return "IRON I";
+                case "IRON 2":
+                    return "IRON II";
+                case "IRON 3":
+                    return "IRON III";
+                case "IRON 4":
+                    return "IRON IV";
+                default:
+                    Console.WriteLine("Nothing");
+                    return null;
+                    
+            }
+        }
 
         [Command("add", RunMode = RunMode.Async)]
         //can be used by admin/owner to create new team on google sheet api
@@ -1955,24 +2371,52 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                             else if(summoner != null)
                             {
                                 List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
-                                
-                                var loopThruElements = 0;
-                                var rank = lists[loopThruElements];
-                                while (rank.QueueType != "RANKED_SOLO_5x5")
+                                if (lists.Count() != 0)
                                 {
-                                    loopThruElements++;
-                                    rank = lists[loopThruElements];
-                                }
-                                await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                    var loopThruElements = 0;
+                                    var rank = lists[loopThruElements];
+                                    while (rank.QueueType != "RANKED_SOLO_5x5")
+                                    {
+                                        loopThruElements++;
+                                        rank = lists[loopThruElements];
+                                    }
 
-                                mongoPlayer.Rank = rank.Tier + " " + rank.Rank;
-                                mongoPlayer.Ign = summoner.Name.ToLower();
-                                mongoPlayer.SummonerId = summoner.Id;
-                                mongoPlayer.CurrentTeam = team.Name;
-                                mongoPlayer.DiscordName = calledUser.ToString();
-                                whatToChange[2] = summoner.Name.ToLower();
-                                rankOfIgn = rank.Tier + " " + rank.Rank;
-                                holdPlayerSummonerId[0] = summoner.Id.ToString();
+
+                                    await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                    mongoPlayer.Rank = rank.Tier + " " + rank.Rank;
+                                    mongoPlayer.Ign = summoner.Name.ToLower();
+                                    mongoPlayer.SummonerId = summoner.Id;
+                                    mongoPlayer.CurrentTeam = team.Name;
+                                    mongoPlayer.DiscordName = calledUser.ToString();
+                                    whatToChange[2] = summoner.Name.ToLower();
+                                    rankOfIgn = rank.Tier + " " + rank.Rank;
+                                    holdPlayerSummonerId[0] = summoner.Id.ToString();
+                                }
+                                else
+                                {
+                                    opggScraper rank = new opggScraper();
+                                    var whatRank = await rank.ScrapeMe(summoner.Name.ToLower());
+                                    string isRealRank = await checkifRealRank(whatRank.ToString().ToUpper());
+
+                                    if (isRealRank != null)
+                                    {
+                                        mongoPlayer.Rank = isRealRank;
+                                        mongoPlayer.Ign = summoner.Name.ToLower();
+                                        mongoPlayer.SummonerId = summoner.Id;
+                                        mongoPlayer.CurrentTeam = team.Name;
+                                        mongoPlayer.DiscordName = calledUser.ToString();
+                                        whatToChange[2] = summoner.Name.ToLower();
+                                        rankOfIgn = isRealRank;
+                                        holdPlayerSummonerId[0] = summoner.Id.ToString();
+                                        await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + isRealRank+"(from last season, they haven't finished promos this season) is this the correct? Reply with 'yes' or 'no'");
+                                    }
+                                    else
+                                    {
+                                        await ReplyAsync("I'm sorry, the player either doesn't exist or hasn't played ranked last season or this season");
+                                        return;
+                                    }
+                                }
+                                
                             }
                         }
                         catch
@@ -2002,7 +2446,7 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                            
 
 
-                            bool playerInDataBase =  await mongo.inputPlayer(mongoPlayer);
+                            bool playerInDataBase =  await mongo.inputPlayer(mongoPlayer, false);
                             bool teamInDataBase = await mongo.updateTeam(whatToChange);
 
                             if(playerInDataBase && teamInDataBase)
@@ -2320,36 +2764,60 @@ public class MsgModule : ModuleBase<SocketCommandContext>
                         {
                             Summoner summoner = await client.GetSummonerBySummonerNameAsync(values[i, 1].ToString(), PlatformId.NA1).ConfigureAwait(false); if (summoner == null)
                             {
-                                await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again " + values[i,1].ToString());
+                                await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again " + values[i, 1].ToString());
                                 return;
                             }
                             else if (summoner != null)
                             {
+
+
+
                                 List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
-
-                                var loopThruElements = 0;
-                                var rank = lists[loopThruElements];
-                                while (rank.QueueType != "RANKED_SOLO_5x5")
+                                Console.WriteLine(lists.ToString());
+                               
+                                if (lists.Count() != 0 && lists[0].QueueType.Contains("RANKED_SOLO_5x5"))
                                 {
-                                    loopThruElements++;
-                                    rank = lists[loopThruElements];
+                                    var loopThruElements = 0;
+                                    var rank = lists[loopThruElements];
+                                    while (rank.QueueType != "RANKED_SOLO_5x5")
+                                    {
+                                        loopThruElements++;
+                                        rank = lists[loopThruElements];
+                                    }
+
+
+                                    await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                    migratePlayer.Rank = rank.Tier + " " + rank.Rank;
+                                    migratePlayer.Ign = summoner.Name.ToLower();
+                                    migratePlayer.SummonerId = summoner.Id;
+                                    migratePlayer.CurrentTeam = teamName.Name;
+
+                                    await mongo.inputPlayer(migratePlayer,false);
+                                    rankOfIgn = rank.Tier + " " + rank.Rank;
+
                                 }
-                                
+                                else
+                                {
+                                    opggScraper rank = new opggScraper();
+                                    var whatRank = await rank.ScrapeMe(summoner.Name.ToLower());
+                                    string isRealRank = await checkifRealRank(whatRank.ToString().ToUpper());
+
+                                    if (isRealRank != null)
+                                    {
+                                        migratePlayer.Rank = isRealRank;
+                                        migratePlayer.Ign = summoner.Name.ToLower();
+                                        migratePlayer.SummonerId = summoner.Id;
+                                        migratePlayer.CurrentTeam = teamName.Name;
 
 
-                                //assigns properties to object
-                                migratePlayer.Rank = rank.Tier + " " + rank.Rank;
-                                migratePlayer.Ign = summoner.Name.ToLower();
-                                migratePlayer.SummonerId = summoner.Id;
-                                migratePlayer.CurrentTeam = teamName.Name;
-                                migratePlayer.LossesThisSeason = losses;
-                                migratePlayer.TotalLosses = losses;
-                                migratePlayer.TotalWins = wins;
-                                migratePlayer.WinsThisSeason = wins;
+                                        rankOfIgn = isRealRank;
 
-                                await mongo.inputPlayer(migratePlayer);
+                                        await mongo.inputPlayer(migratePlayer,false);
+                                        
+                                        await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + isRealRank + "(from last season, they haven't finished promos this season) is this the correct? Reply with 'yes' or 'no'");
+                                    }
 
-                                rankOfIgn = rank.Tier + " " + rank.Rank;
+                                }
                             }
                         }
                         catch

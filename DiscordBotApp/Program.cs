@@ -14,28 +14,28 @@ using MongoDB.Driver;
 namespace DiscordBotApp
 {
 
-   
-    
+
+
 
     public class Program
     {
-        
+
         public static void Main(string[] args)
         {
-           
+
             new Program().MainAsync().GetAwaiter().GetResult();
 
-            
+
         }
 
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IServiceProvider _services;
 
-       
+
         public async Task MainAsync()
-		{
-           
+        {
+
 
             Console.WriteLine("made it in task");
 
@@ -57,18 +57,18 @@ namespace DiscordBotApp
             };
             var client = new DiscordSocketClient(config);
 
-            
-            
+
+
             _client.Log += Log;
 
 
             //  You can assign your bot token to a string, and pass that in to connect.
             //  This is, however, insecure, particularly if you plan to have your code hosted in a public repository.
-           
 
-            
+
+
             await RegisterCommandsAsync();
-           
+
 
             // Some alternative options would be to keep your token in an Environment Variable or a standalone file.
             // var token = Environment.GetEnvironmentVariable("NameOfYourEnvironmentVariable");
@@ -81,7 +81,7 @@ namespace DiscordBotApp
             // Block this task until the program is closed.
             await Task.Delay(-1);
         }
-        
+
         public async Task RegisterCommandsAsync()
         {
             _client.MessageReceived += HandleCommandAsync;
@@ -95,18 +95,18 @@ namespace DiscordBotApp
             if (message.Author.IsBot) return;
 
             int argPos = 0;
-            if(message.HasStringPrefix("!", ref argPos))
+            if (message.HasStringPrefix("!", ref argPos))
             {
-                
+
                 var result = await _commands.ExecuteAsync(context, argPos, _services);
                 if (!result.IsSuccess) Console.WriteLine(result.ErrorReason);
             }
         }
 
         private Task Log(LogMessage msg)
-		{
-			Console.WriteLine(msg.ToString());
-			return Task.CompletedTask;
-		}
-	}
+        {
+            Console.WriteLine(msg.ToString());
+            return Task.CompletedTask;
+        }
+    }
 }

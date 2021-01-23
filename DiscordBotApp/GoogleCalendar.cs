@@ -90,7 +90,7 @@ namespace CalendarStyle
         }
 
 
-        public void AddMatch(string team1, string team2, DateTime scheduledDate, string timeZone)
+        public string AddMatch(string team1, string team2, DateTime scheduledDate, string timeZone)
         {
             UserCredential credential;
             Console.WriteLine("made it into add match");
@@ -148,6 +148,7 @@ namespace CalendarStyle
             {
                 Event createdEvent = request.Execute();
                 Console.WriteLine("Event created: {0}", createdEvent.HtmlLink);
+                return createdEvent.Id;
             }
             catch(Exception ex)
             {
@@ -190,7 +191,7 @@ namespace CalendarStyle
             }
             return sentEvents;
             */
-            return;
+            return null;
 
         }
     }
