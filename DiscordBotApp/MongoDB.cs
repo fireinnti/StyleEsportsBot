@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using player = DiscordBotApp.Modules.Player;
 using team = DiscordBotApp.Modules.Team;
 using matches = DiscordBotApp.Modules.Matches;
-using commands = DiscordBotApp.Modules.Commands;
+using commands = DiscordBotApp.Modules.Commands.UserCommands;
 using System.Configuration;
 namespace DiscordBotApp
 {
@@ -716,7 +716,7 @@ namespace DiscordBotApp
             FilterDefinition<BsonDocument> filter;
 
             List<string> justInCase = new List<string>();
-            commands command = new commands();
+            commands command = new commands(null);
             string[] whatToChange = new string[3];
             whatToChange[0] = team;
             string[] newPlayers = new string[players.Length];

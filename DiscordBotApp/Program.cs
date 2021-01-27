@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Discord.Addons.Interactive;
 using MongoDB.Driver;
+using listener = DiscordBotApp.HttpListenerClass;
 
 
 namespace DiscordBotApp
@@ -22,8 +23,9 @@ namespace DiscordBotApp
 
         public static void Main(string[] args)
         {
-
+            
             new Program().MainAsync().GetAwaiter().GetResult();
+            
 
 
         }
@@ -41,7 +43,7 @@ namespace DiscordBotApp
 
             _client = new DiscordSocketClient();
             _commands = new CommandService();
-
+            
             _services = new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
@@ -77,6 +79,9 @@ namespace DiscordBotApp
 
             await _client.LoginAsync(TokenType.Bot, discordToken);
             await _client.StartAsync();
+
+           //listener maybe = new listener();
+           // maybe.SimpleListenerExample(new[] { "http://localhost/" });
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
