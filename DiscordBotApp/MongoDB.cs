@@ -270,6 +270,7 @@ namespace DiscordBotApp
                 {"RequiredGames" , mongoTeam.RequiredGames },
                 {"Challenges" ,  mongoTeam.Challenges },
                 {"TeamLastCheckedForPlayers" ,  mongoTeam.TeamLastCheckedForPlayers },
+                {"Logo", mongoTeam.Logo },
                 {"Org", mongoTeam.Org },
                 {"TeamTextChannel", mongoTeam.TeamTextChannel },
                 {"TeamVoiceChannel", mongoTeam.TeamVoiceChannel }
@@ -352,6 +353,28 @@ namespace DiscordBotApp
             await collectionTeam.FindOneAndUpdateAsync(filterChallengerTeamId, update, options);
             await collectionChallenges.InsertOneAsync(documentChallenge);
             return true;
+        }
+
+        public async Task setLogo(string team,string url)
+        {
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+            //applies player object to new object in this task
+
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var collection = database.GetCollection<BsonDocument>("Team");
+
+
+            var update = Builders<BsonDocument>.Update.Set("Logo",url);
+
+            var filterSub = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            await collection.UpdateOneAsync(filterSub, update);
+            return;
+
         }
 
         public async Task<bool> optional(string challenger, string challengee)
@@ -997,7 +1020,7 @@ namespace DiscordBotApp
         }
 
         //gets info on certain team
-        public  BsonDocument infoTeam(string team)
+        public async Task <BsonDocument> infoTeam(string team)
         {
 
             string mongoKey;
@@ -1014,21 +1037,27 @@ namespace DiscordBotApp
             var teamProjection = Builders<BsonDocument>.Projection.Exclude("_id");
             //gets specific team
             var teamFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
-
+           
             // var document = collection.Find(new BsonDocument()).Project(projection).FirstOrDefault();
             BsonDocument document = teamCollection.Find(teamFilter).Project(teamProjection).FirstOrDefault();
 
 
-           //FilterDefinitionBuilder<BsonDocument> builder = Builders<BsonDocument>.Filter;
-           //FilterDefinition<BsonDocument> filter = builder.Eq("Ign", document["Top"]) & builder.Eq("Ign", document["Jg"]) & builder.Eq("Ign", document["Mid"]) & builder.Eq("Ign", document["Adc"]) & builder.Eq("Ign", document["Sup"]);
+            //used to add to all collection
+            /*
+            var teamAll = Builders<BsonDocument>.Filter.Empty;
+            var updateDocument = Builders<BsonDocument>.Update.Set("Logo", "");
+
+            await teamCollection.UpdateManyAsync(teamAll, updateDocument);*/
+            //FilterDefinitionBuilder<BsonDocument> builder = Builders<BsonDocument>.Filter;
+            //FilterDefinition<BsonDocument> filter = builder.Eq("Ign", document["Top"]) & builder.Eq("Ign", document["Jg"]) & builder.Eq("Ign", document["Mid"]) & builder.Eq("Ign", document["Adc"]) & builder.Eq("Ign", document["Sup"]);
 
 
-           // var listOfPlayers = playerCollection.Find(filter).FirstOrDefault();
+            // var listOfPlayers = playerCollection.Find(filter).FirstOrDefault();
 
-            
-            
-          // Console.WriteLine(listOfPlayers);
-            
+
+
+            // Console.WriteLine(listOfPlayers);
+
             return document;
         }
 
@@ -1096,11 +1125,14 @@ namespace DiscordBotApp
             return true;
         }
 
-        public async Task<string[]> GetRanks()
+        public async Task<List<string>> GetRanks()
         {
-            string[] nameAndElo = new string[2];
-            nameAndElo[0] = "";
-            nameAndElo[1] = "";
+            List<string> nameAndElo = new List<string>();
+            
+            
+            int elementPlaced = 0;
+            int numUp = 0;
+            int numUpRank = 1;
             string mongoKey;
             mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
 
@@ -1116,12 +1148,28 @@ namespace DiscordBotApp
 
             var checkTeamExists = await collection.Find(teamFilter).SortByDescending(x=> x["Elo"]).ToListAsync();
 
+            string[] holdNameAndElo = new string[checkTeamExists.Count/25 + 1];
+            for (int i = 0; i < holdNameAndElo.Length; i++)
+            {
+                holdNameAndElo[i] = "";
+            }
             foreach (var row in checkTeamExists)
             {
-                nameAndElo[0] = nameAndElo[0].ToString() + "\n"+ row["TeamName"].ToString();
-                nameAndElo[1] = nameAndElo[1].ToString() + "\n" + Math.Round(row["Elo"].ToDouble(), 1).ToString(); 
+                if (numUp == 25)
+                {
+                    nameAndElo.Add(holdNameAndElo[elementPlaced]);
+                    elementPlaced++;
+                    numUp = 0;
+                }
+                holdNameAndElo[elementPlaced] = holdNameAndElo[elementPlaced].ToString() + $"\n{numUpRank}. "+ row["TeamName"].ToString() + ": " + Math.Round(row["Elo"].ToDouble(), 1).ToString();
+                numUp++;
+                numUpRank++;
+                
             }
-
+            if (numUp < 25)
+            {
+                nameAndElo.Add(holdNameAndElo[elementPlaced]);
+            }
             return nameAndElo;
         }
         //gets elo range for team
@@ -1143,11 +1191,12 @@ namespace DiscordBotApp
             string listOfTeams = "";
 
             var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", name);
+            var paidChallenge = Builders<BsonDocument>.Filter.Eq("Paid", true);
             var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
             
             challengerElo = Math.Round(documentCalledTeam["Elo"].ToDouble(), 1);
 
-            var document = await collection.Find(new BsonDocument()).SortByDescending(x => x["Elo"]).ToListAsync();
+            var document = await collection.Find(paidChallenge).SortByDescending(x => x["Elo"]).ToListAsync();
 
 
             foreach (var item in document)
@@ -1166,6 +1215,40 @@ namespace DiscordBotApp
             }
 
             return listOfTeams;
+        }
+
+        public async Task<string[]> getChannelIds(string team)
+        {
+            string[] channels = new string[2];
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+            //applies player object to new object in this task
+
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var collection = database.GetCollection<BsonDocument>("Team");
+            var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
+
+            channels[0] = documentCalledTeam["TeamTextChannel"].ToString();
+            channels[1] = documentCalledTeam["TeamVoiceChannel"].ToString();
+
+            if(channels[0] == null || channels[1] == null){
+                return null;
+            }
+            else {
+                var updateDocument = Builders<BsonDocument>.Update.Set("Paid", false);
+                var updateTextChannel = Builders<BsonDocument>.Update.Set("TeamTextChannel", "");
+                var updateVoiceChannel = Builders<BsonDocument>.Update.Set("TeamVoiceChannel", "");
+                await collection.UpdateOneAsync(challengerFilter, updateDocument);
+                await collection.UpdateOneAsync(challengerFilter, updateTextChannel);
+                await collection.UpdateOneAsync(challengerFilter, updateVoiceChannel);
+                return channels;
+            }
+
         }
     }
 }

@@ -78,6 +78,7 @@ namespace DiscordBotApp.Modules
         public Int32 RequiredGames = 3;
         public Int32 Challenges = 0;
         public DateTime TeamLastCheckedForPlayers;
+        public string Logo = "";
 
         public string Org = "";
         public string TeamTextChannel = "";
@@ -189,7 +190,7 @@ namespace DiscordBotApp.Modules
                 {
                     var mongo = new mongo();
 
-                    BsonDocument teamData = mongo.infoTeam(teamName.ToString());
+                    BsonDocument teamData = await mongo.infoTeam(teamName.ToString());
 
                     int numCount = 5;
 
@@ -199,7 +200,7 @@ namespace DiscordBotApp.Modules
 
                     bool updateSheet = false;
 
-                    if (timeBetweenDays.Days > 2)
+                    if (timeBetweenDays.Days > 1)
                     {
                         updateSheet = true;
 
@@ -258,11 +259,18 @@ namespace DiscordBotApp.Modules
                     }
 
                     var hyperLink = "https://na.op.gg/multi/query=" + HttpUtility.UrlEncode(stringOfIgns);
+                    string logo = "";
+                    if (teamData["Logo"].ToString() != null)
+                    {
+                        logo = teamData["Logo"].ToString();
+                    }
 
                     var exampleAuthor = new EmbedAuthorBuilder()
                 .WithName("TeamCard")
 
                 .WithIconUrl("https://cdn.discordapp.com/attachments/643609428012040202/798093546178740224/GG_transparent.png");
+
+                    
 
                     var exampleField = new EmbedFieldBuilder()
                             .WithName("Name")
@@ -289,11 +297,13 @@ namespace DiscordBotApp.Modules
                     //  .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
                     var embed = new EmbedBuilder()
                             .AddField(exampleField)
+                            .WithThumbnailUrl(logo)                           
                             .AddField(otherField)
                             .AddField(winLossField)
                            .AddField(playerField)
                            .AddField(multiField)
                             .WithAuthor(exampleAuthor);
+                            
 
 
 
@@ -311,7 +321,59 @@ namespace DiscordBotApp.Modules
                 }
             }
 
+            [Command("setlogo", RunMode=RunMode.Async)]
+            [Summary("!setlogo @yourteam linktologo sets logo for your team. If it's offensive you'll get talked to by admins.")]
+            public async Task SetLogo(IRole team ,params string[] url)
+            {
+                try
+                {
+                    var mongo = new MongoDB();
 
+
+
+
+
+
+                    var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == team.Name).Members;
+                    var google = new googleSheet();
+
+
+                    //makes sure that there is a pending scheduled match
+
+
+                    var channel = Context.Guild as SocketGuild;
+
+                    //make sure user has correct roles
+                    var userUsingCommand = Context.User as SocketGuildUser;
+                    var isCaptain = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                    var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                    if ((userUsingCommand.Roles.Contains(team) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin))
+                    {
+                        await ReplyAsync("Are you sure the url you provided is your teams logo? 'yes' or 'no'" + url[0].ToString());
+
+                        var confirm = await NextMessageAsync();
+
+                        if(confirm.ToString().ToLower() == "yes")
+                        {
+                           
+                            await mongo.setLogo(team.Name,url[0].ToString());
+                            await ReplyAsync("Logo set");
+                        }
+                        else
+                        {
+                            await ReplyAsync("Please try again");
+                        }
+                    }
+                    else
+                    {
+                        await ReplyAsync("You are neither the captain of the called team, or an admin");
+                    }
+                }
+                catch
+                {
+                    await ReplyAsync("Something went wrong, please contact admins");
+                }
+            }
 
             [Command("challenge")]
             [Summary("!challenge @yourteam @otherteam (this will set a challenge between the teams)")]
@@ -1092,8 +1154,19 @@ namespace DiscordBotApp.Modules
                     else if (summoner != null)
                     {
                         mongoPlayer.SummonerId = accountId;
+
+
+                        bool foundSoloRank = false;
                         List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
-                        if (lists.Count() != 0)
+                        foreach (var item in lists)
+                        {
+                            if (item.QueueType == "RANKED_SOLO_5x5")
+                            {
+                                foundSoloRank = true;
+                            }
+
+                        }
+                        if (foundSoloRank)
                         {
                             var loopThruElements = 0;
                             var rank = lists[loopThruElements];
@@ -1104,25 +1177,33 @@ namespace DiscordBotApp.Modules
                             }
 
 
-                            //await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
-                            Console.WriteLine("what");
+
                             mongoPlayer.Rank = rank.Tier + " " + rank.Rank;
                             mongoPlayer.Ign = summoner.Name;
-
-
-
 
                         }
                         else
                         {
-                            return null;
+                            opggScraper rank = new opggScraper();
+                            var whatRank = await rank.ScrapeMe(summoner.Name);
+                            string isRealRank = await checkifRealRank(whatRank.ToString().ToUpper());
+
+                            if (isRealRank != null)
+                            {
+                                mongoPlayer.Rank = isRealRank;
+                                mongoPlayer.Ign = summoner.Name;
+
+                            }
+
                         }
 
+
+
+                        var insert = await mongo.inputPlayer(mongoPlayer, true);
+                        playerArray[0] = mongoPlayer.Ign;
+                        playerArray[1] = mongoPlayer.Rank;
+                        return playerArray;
                     }
-                    var insert = await mongo.inputPlayer(mongoPlayer, true);
-                    playerArray[0] = mongoPlayer.Ign;
-                    playerArray[1] = mongoPlayer.Rank;
-                    return playerArray;
                 }
                 catch
                 {
@@ -2020,11 +2101,13 @@ namespace DiscordBotApp.Modules
                 public async Task updateRanks()
                 {
 
+                    int numUp = 0;
 
                     MongoDB mongo = new MongoDB();
 
-                    string[] ranks = await mongo.GetRanks();
+                    List<string> ranks = await mongo.GetRanks();
 
+                    
                     var channel = Context.Guild;
 
                     var embedBuilder = new EmbedBuilder();
@@ -2033,7 +2116,7 @@ namespace DiscordBotApp.Modules
 
                     try
                     {
-                        var messages = await channel.GetTextChannel(798058859536056391).GetMessagesAsync(1).FlattenAsync();
+                        var messages = await channel.GetTextChannel(798058859536056391).GetMessagesAsync(ranks.Count() + 1).FlattenAsync();
                         var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
                         await (messageSender as ITextChannel).DeleteMessagesAsync(filteredMessages);
                     }
@@ -2043,64 +2126,68 @@ namespace DiscordBotApp.Modules
                     }
 
 
-                    /*  
+                /*  
 
-                      // Download X messages starting from Context.Message, which means
-                      // that it won't delete the message used to invoke this command.
-                      var messagess = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, 1).FlattenAsync();
+                  // Download X messages starting from Context.Message, which means
+                  // that it won't delete the message used to invoke this command.
+                  var messagess = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, 1).FlattenAsync();
 
-                      // Note:
-                      // FlattenAsync() might show up as a compiler error, because it's
-                      // named differently on stable and nightly versions of Discord.Net.
-                      // - Discord.Net 1.x: Flatten()
-                      // - Discord.Net 2.x: FlattenAsync()
+                  // Note:
+                  // FlattenAsync() might show up as a compiler error, because it's
+                  // named differently on stable and nightly versions of Discord.Net.
+                  // - Discord.Net 1.x: Flatten()
+                  // - Discord.Net 2.x: FlattenAsync()
 
-                      // Ensure that the messages aren't older than 14 days,
-                      // because trying to bulk delete messages older than that
-                      // will result in a bad request.
-                      var filteredMessages = messagess.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+                  // Ensure that the messages aren't older than 14 days,
+                  // because trying to bulk delete messages older than that
+                  // will result in a bad request.
+                  var filteredMessages = messagess.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
 
-                      // Get the total amount of messages.
-                      var count = filteredMessages.Count();
+                  // Get the total amount of messages.
+                  var count = filteredMessages.Count();
 
-                      // Check if there are any messages to delete.
-                      if (count == 0)
-                          await ReplyAsync("Nothing to delete.");
+                  // Check if there are any messages to delete.
+                  if (count == 0)
+                      await ReplyAsync("Nothing to delete.");
 
-                      else
-                      {
-                          // The cast here isn't needed if you're using Discord.Net 1.x,
-                          // but I'd recommend leaving it as it's what's required on 2.x, so
-                          // if you decide to update you won't have to change this line.
-                          await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
-                          await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
+                  else
+                  {
+                      // The cast here isn't needed if you're using Discord.Net 1.x,
+                      // but I'd recommend leaving it as it's what's required on 2.x, so
+                      // if you decide to update you won't have to change this line.
+                      await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
+                      await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
 
 
-              */
+          */
+                foreach (var twentyFive in ranks)
+                {
+
 
                     var exampleAuthor = new EmbedAuthorBuilder()
                 .WithName("Live Style Ranks")
 
                 .WithIconUrl("https://cdn.discordapp.com/attachments/643609428012040202/798093546178740224/GG_transparent.png");
                     var exampleFooter = new EmbedFooterBuilder()
-                            .WithText("Updated Every Hour")
+                            .WithText("")
                             .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
                     var exampleField = new EmbedFieldBuilder()
-                            .WithName("Name Of Teams")
-                            .WithValue(ranks[0].ToString())
+                            .WithName("Name Of Teams: Elo")
+                            .WithValue(ranks[numUp].ToString())
                             .WithIsInline(true);
-                    var otherField = new EmbedFieldBuilder()
+                    /*var otherField = new EmbedFieldBuilder()
                             .WithName("Elo")
-                            .WithValue(ranks[1].ToString())
-                            .WithIsInline(true);
+                            .WithValue(ranks[numUp].ToString())
+                            .WithIsInline(true);*/
                     var embed = new EmbedBuilder()
                             .AddField(exampleField)
-                            .AddField(otherField)
+                           // .AddField(otherField)
                             .WithAuthor(exampleAuthor)
                             .WithFooter(exampleFooter);
 
                     await messageSender.SendMessageAsync("", false, embed.Build());
-
+                    numUp++;
+                }
                     //it (messages as SocketUserMessage).ModifyAsync(x => { x.Content = ranks.ToString(); x.Embed = embedBuilder.Build(); });
 
 
@@ -2744,6 +2831,57 @@ namespace DiscordBotApp.Modules
 
                     }
 
+                }
+                [Command("deleteteam", RunMode = RunMode.Async)]
+                [Summary("!deleteteam @teamname (deletes team from google sheet, removes them from ranklist, deletes text and voice channels)")]
+                public async Task DeleteTeam(IRole team)
+                {
+                    var google = new googleSheet();
+                    var mongo = new mongo();
+                    var user = Context.User as SocketGuildUser;
+                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    await ReplyAsync("Are you sure you want to delete " + team.Name + "? 'yes' or 'no'");
+
+                    var confirmDelete = await NextMessageAsync();
+
+                    if (confirmDelete != null)
+                    {
+                        if (confirmDelete.ToString().ToLower() == "yes")
+                        {
+                            try {
+                                await google.deleteTeam(team.Name);
+
+                                string[] channelIds = await mongo.getChannelIds(team.Name);
+
+                                var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0]));
+                                var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]));
+
+                               await channelText.DeleteAsync();
+                                await channelVoice.DeleteAsync();
+                                await team.DeleteAsync();
+                                await ReplyAsync("Deleted team");
+
+                            }
+                            catch { await ReplyAsync("Something went wrong, potential text or voice channel not found"); }
+                        }
+                        else
+                        {
+                            await ReplyAndDeleteAsync("Did not delete role, as you didn't say 'yes'");
+                        }
+                    }
+                    else
+                    {
+                        await ReplyAndDeleteAsync("Did not delete role, as you didn't answer");
+                        return;
+                    }
+                }
+                else
+                {
+                    await ReplyAndDeleteAsync("You do not have the admin role.");
+                    return;
+                }
                 }
 
                 [Command("elo")]
