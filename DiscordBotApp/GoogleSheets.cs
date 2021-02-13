@@ -394,6 +394,10 @@ namespace DiscordBotApp
                 {
                     moveInformationRange = $"{teamName}!E{start + 15}:F{howManyOnList + 15}";
                 }
+                else if(locationOfMove == "sublist")
+                {
+                    moveInformationRange = $"{teamName}!b{start + 18}:C{howManyOnList + 19}";
+                }
 
                 
                 
@@ -603,6 +607,118 @@ namespace DiscordBotApp
                 Console.WriteLine(JsonConvert.SerializeObject(response));
 
                 
+                /* else
+                 {
+                     Console.WriteLine("No data found.");
+
+                 }*/
+            }
+
+
+
+            public async Task RemoveSub(string teamName, List<int> position)
+            {
+
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+                int teamPosition = position[0];
+                int lengthOfTeamList = position[1];
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+                Console.WriteLine("made it past sheets");
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+                //ranges of the teams that will need removal.
+                string yourTeamRange =  $"{teamName}!B{teamPosition + 19}:C{teamPosition + 19}";
+
+                
+                string yourTeamListLengthBehindName = $"{teamName}!B{lengthOfTeamList + 18}:C{lengthOfTeamList + 18}";
+                
+                
+                
+                 
+                   
+                
+                   
+               
+                string[,] infoYourTeam = null;
+                
+                if (lengthOfTeamList > 1 && lengthOfTeamList != teamPosition)
+                {
+                    infoYourTeam = MoveUpList(teamName, lengthOfTeamList, teamPosition, "sublist");
+                }
+                
+
+
+                string valueInputOption = "RAW";
+
+
+
+
+
+
+
+                var yourTeamList = new string[] { "", "" };
+                
+                var moveUpList = new string[] { "", "" };
+                
+
+
+
+                List<Data.ValueRange> data = new List<Data.ValueRange>();
+                data.Add(new Data.ValueRange() { Range = yourTeamRange, Values = new List<IList<object>> { yourTeamList } });
+                
+
+                //checks if it needs to move up the list
+                if (lengthOfTeamList > 1 && lengthOfTeamList != teamPosition)
+                {
+                    moveUpList[0] = infoYourTeam[lengthOfTeamList - teamPosition, 0].ToString();
+                    moveUpList[1] = infoYourTeam[lengthOfTeamList - teamPosition, 1].ToString();
+
+                    data.Add(new Data.ValueRange() { Range = yourTeamRange, Values = new List<IList<object>> { moveUpList } });
+
+
+                    data.Add(new Data.ValueRange() { Range = yourTeamListLengthBehindName, Values = new List<IList<object>> { yourTeamList } });
+                }
+                
+
+
+
+
+                Data.BatchUpdateValuesRequest requestBody = new Data.BatchUpdateValuesRequest();
+                requestBody.ValueInputOption = valueInputOption;
+                requestBody.Data = data;
+
+                SpreadsheetsResource.ValuesResource.BatchUpdateRequest request = service.Spreadsheets.Values.BatchUpdate(requestBody, googleSheetUrl);
+
+                // To execute asynchronously in an async method, replace `request.Execute()` as shown:
+                Data.BatchUpdateValuesResponse response = request.Execute();
+                // Data.BatchUpdateValuesResponse response = await request.ExecuteAsync();
+
+                // TODO: Change code below to process the `response` object:
+                Console.WriteLine(JsonConvert.SerializeObject(response));
+
+
                 /* else
                  {
                      Console.WriteLine("No data found.");

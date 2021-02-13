@@ -15,7 +15,7 @@ namespace DiscordBotApp
     class MongoDB
     {
         //gets info on certain player
-        public string player()
+        public async Task<string> playerIfNoDiscord(string ign)
         {
 
             string mongoKey;
@@ -25,14 +25,25 @@ namespace DiscordBotApp
 
             var client = new MongoClient(connectionString);
             Console.WriteLine(client);
-          var database = client.GetDatabase("StyleData");
+            var database = client.GetDatabase("StyleData");
             //starts a collection
             var collection = database.GetCollection<BsonDocument>("Player");
             //filters unneeded stored info
-            var projection = Builders<BsonDocument>.Projection.Exclude("_id").Exclude("SummonerId");
-            var document = collection.Find(new BsonDocument()).Project(projection).FirstOrDefault();
-            Console.WriteLine(document.ToString());
-            return document.ToString();
+            var Filter = Builders<BsonDocument>.Filter.Eq("Ign", ign);
+            
+            var document = collection.Find(Filter).FirstOrDefault();
+            if(document != null)
+            {
+                var update = Builders<BsonDocument>.Update.Set("CurrentTeam", "");
+                await collection.UpdateOneAsync(Filter, update);
+                return document["Ign"].AsString;
+
+            }
+            else
+            {
+                return null;
+            }
+            
         }
 
         //change status to paid
@@ -52,7 +63,7 @@ namespace DiscordBotApp
             var teamFilter = Builders<BsonDocument>.Filter.Eq("TeamName", teamName);
 
             var checkTeamExists = await collection.Find(teamFilter).FirstOrDefaultAsync();
-            if(checkTeamExists !=null)
+            if (checkTeamExists != null)
             {
                 var updateDocument = Builders<BsonDocument>.Update.Set("Paid", true);
 
@@ -78,7 +89,7 @@ namespace DiscordBotApp
             var database = client.GetDatabase("StyleData");
             var collection = database.GetCollection<BsonDocument>("Team");
 
-           
+
             var teamFilter = Builders<BsonDocument>.Filter.Eq("TeamName", teamName);
 
             var checkTeamExists = await collection.Find(teamFilter).FirstOrDefaultAsync();
@@ -113,7 +124,7 @@ namespace DiscordBotApp
             //starts a collection
             var collection = database.GetCollection<BsonDocument>("Player");
 
-           
+
 
             player mongoPlayer = (player)player;
 
@@ -125,8 +136,8 @@ namespace DiscordBotApp
                 {
                     var updateDocument = Builders<BsonDocument>.Update.Set("Ign", mongoPlayer.Ign).
                     Set("Rank", mongoPlayer.Rank);
-                    
-                    
+
+
 
 
 
@@ -134,19 +145,19 @@ namespace DiscordBotApp
                     await collection.UpdateOneAsync(playerFilter, updateDocument);
                     return true;
                 }
-            else
-            {
-                var updateDocument = Builders<BsonDocument>.Update.Set("Ign", mongoPlayer.Ign).
-                    Set("Rank", mongoPlayer.Rank).
-                    Set("CurrentTeam", mongoPlayer.CurrentTeam).
-                    Set("DiscordName", mongoPlayer.DiscordName);
-                
-                
+                else
+                {
+                    var updateDocument = Builders<BsonDocument>.Update.Set("Ign", mongoPlayer.Ign).
+                        Set("Rank", mongoPlayer.Rank).
+                        Set("CurrentTeam", mongoPlayer.CurrentTeam).
+                        Set("DiscordName", mongoPlayer.DiscordName);
 
-               
-                await collection.UpdateOneAsync(playerFilter, updateDocument);
-                return true; 
-            }
+
+
+
+                    await collection.UpdateOneAsync(playerFilter, updateDocument);
+                    return true;
+                }
 
             //creates a new player in player collection
             var document = new BsonDocument { { "Ign", mongoPlayer.Ign },
@@ -157,14 +168,14 @@ namespace DiscordBotApp
                 {"TotalLosses",mongoPlayer.TotalLosses },
                 {"TotalWins",mongoPlayer.TotalWins },
                 {"WinsThisSeason", mongoPlayer.WinsThisSeason },
-                {"DiscordName" , mongoPlayer.DiscordName }, 
+                {"DiscordName" , mongoPlayer.DiscordName },
                 {"AltNames", new BsonArray{ } },
                 {"PreviousTeams", new BsonArray{} }
 
-                
-                
-                
-                
+
+
+
+
         };
             await collection.InsertOneAsync(document);
             return false;
@@ -180,7 +191,7 @@ namespace DiscordBotApp
                 string teamName = whatToUpdate[0];
                 string keyName = whatToUpdate[1];
                 string propertyForKey = whatToUpdate[2];
-                
+
 
                 var connectionString = mongoKey;
                 var client = new MongoClient(connectionString);
@@ -192,10 +203,11 @@ namespace DiscordBotApp
                 var update = Builders<BsonDocument>.Update.Set(keyName, propertyForKey);
                 if (whatToUpdate[1] == "Subs")
                 {
-                     update = Builders<BsonDocument>.Update.Push(keyName, propertyForKey);
-                }else
+                    update = Builders<BsonDocument>.Update.Push(keyName, propertyForKey);
+                }
+                else
                 {
-                     update = Builders<BsonDocument>.Update.Set(keyName, propertyForKey);
+                    update = Builders<BsonDocument>.Update.Set(keyName, propertyForKey);
                 }
                 var updateTime = Builders<BsonDocument>.Update.Set("TeamLastCheckedForPlayers", DateTime.Now);
                 await collection.UpdateOneAsync(filter, update);
@@ -224,7 +236,7 @@ namespace DiscordBotApp
             //starts a collection
             var collection = database.GetCollection<BsonDocument>("Team");
             team mongoTeam = (team)team;
-            
+
             //making sure to get each array into bson array
             BsonArray subs = new BsonArray();
             foreach (var player in mongoTeam.Subs)
@@ -275,8 +287,8 @@ namespace DiscordBotApp
                 {"TeamTextChannel", mongoTeam.TeamTextChannel },
                 {"TeamVoiceChannel", mongoTeam.TeamVoiceChannel }
 
-            
-                
+
+
 
 
 
@@ -344,9 +356,9 @@ namespace DiscordBotApp
             var update = new UpdateDefinitionBuilder<BsonDocument>().Inc("Challenges", 1);
             var options = new FindOneAndUpdateOptions<BsonDocument>();
             options.ReturnDocument = ReturnDocument.After;
-            
 
-            
+
+
             //updates number of challenges on team documents
             var result = await collectionTeam.FindOneAndUpdateAsync(filterChallengeeTeamId, update, options);
             Console.WriteLine(result);
@@ -355,7 +367,7 @@ namespace DiscordBotApp
             return true;
         }
 
-        public async Task setLogo(string team,string url)
+        public async Task setLogo(string team, string url)
         {
             string mongoKey;
             mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
@@ -369,7 +381,7 @@ namespace DiscordBotApp
             var collection = database.GetCollection<BsonDocument>("Team");
 
 
-            var update = Builders<BsonDocument>.Update.Set("Logo",url);
+            var update = Builders<BsonDocument>.Update.Set("Logo", url);
 
             var filterSub = Builders<BsonDocument>.Filter.Eq("TeamName", team);
             await collection.UpdateOneAsync(filterSub, update);
@@ -433,7 +445,7 @@ namespace DiscordBotApp
             }
         }
         //add challenge
-        public async Task<Object []> challenge(Modules.Challenges challenge)
+        public async Task<Object[]> challenge(Modules.Challenges challenge)
         {
             string mongoKey;
             mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
@@ -441,19 +453,19 @@ namespace DiscordBotApp
             //variable to hold string and bool
             Object[] reasonAndOption = new Object[4];
 
-            
+
             var connectionString = mongoKey;
 
             var client = new MongoClient(connectionString);
 
             var database = client.GetDatabase("StyleData");
             var collectionTeams = database.GetCollection<BsonDocument>("Team");
-            
+
 
             int challengerChallenges;
             int challengeeChallenges;
 
-            
+
 
             //checks if this is an optional challenge
             bool optionalCheck = await optional(challenge.Challenger, challenge.Challengee);
@@ -484,7 +496,7 @@ namespace DiscordBotApp
             }
             else
             {
-                
+
                 reasonAndOption[0] = (challenge.Challenger + " is not in our database");
                 return reasonAndOption;
             }
@@ -497,7 +509,7 @@ namespace DiscordBotApp
                 BsonElement num;
                 //checks number of challenges
                 checkChallengeeExists.TryGetElement("Challenges", out num);
-                
+
                 challengeeChallenges = num.Value.ToInt32();
 
                 //outs id
@@ -527,7 +539,7 @@ namespace DiscordBotApp
 
         }
 
-        public async Task<bool> DeleteChallenge(string yourTeam ,  string opposingTeam, bool sentFromGetChallengeInfo = false)
+        public async Task<bool> DeleteChallenge(string yourTeam, string opposingTeam, bool sentFromGetChallengeInfo = false)
         {
             //connects to localhost
             string mongoKey;
@@ -535,7 +547,7 @@ namespace DiscordBotApp
 
             var connectionString = mongoKey;
             var client = new MongoClient(connectionString);
-            
+
 
             var database = client.GetDatabase("StyleData");
 
@@ -558,12 +570,12 @@ namespace DiscordBotApp
             string challengerId;
             string challengeeId;
             bool optional;
-            
-            //checks if challenge exists either way
-            
-            
 
-            
+            //checks if challenge exists either way
+
+
+
+
 
             var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
 
@@ -571,7 +583,7 @@ namespace DiscordBotApp
             {
                 return false;
             }
-            else if (checkChallengeExists !=null)
+            else if (checkChallengeExists != null)
             {
                 BsonElement id;
                 checkChallengeExists.TryGetElement("ChallengerId", out id);
@@ -601,7 +613,7 @@ namespace DiscordBotApp
 
                 return true;
             }
-            else if(checkChallengeExistsSwap != null)
+            else if (checkChallengeExistsSwap != null)
             {
                 BsonElement id;
                 BsonElement option;
@@ -640,7 +652,7 @@ namespace DiscordBotApp
                 {
                     return false;
                 }
-                
+
             }
             return false;
         }
@@ -677,7 +689,7 @@ namespace DiscordBotApp
 
                 Console.WriteLine(challenger + " has " + challengerChallenges + "number of challenges");
 
-                if(challengerChallenges >= 3)
+                if (challengerChallenges >= 3)
                 {
                     return (challenger + " has 3 or more challenges, they need to schedule games before anymore challenges can happen.");
                 }
@@ -712,7 +724,7 @@ namespace DiscordBotApp
 
 
         //looks up player from database
-        public async Task<string[]> playerLookup(string [] players, bool recheckPlayer, string team)
+        public async Task<string[]> playerLookup(string[] players, bool recheckPlayer, string team)
         {
 
             string mongoKey;
@@ -724,7 +736,7 @@ namespace DiscordBotApp
             string[] listOfPlayers = new string[players.Length];
             int numCount = 0;
 
-            
+
             Console.WriteLine(client);
             var database = client.GetDatabase("StyleData");
             //starts a collection
@@ -810,30 +822,30 @@ namespace DiscordBotApp
                     {
                         listOfPlayers[numCount] = collectionOfPlayers["Ign"].ToString() + " " + collectionOfPlayers["Rank"].ToString();
                     }
-                    
-                    
+
+
                     numCount++;
-                    
+
                 }
-                
+
                 return listOfPlayers;
             }
 
-            
+
             foreach (var player in players)
-                {
-                    filter = builder.Eq("Ign", players[numCount]);
-                    collectionOfPlayers = await collection.Find(filter).Project(projection).FirstOrDefaultAsync();
+            {
+                filter = builder.Eq("Ign", players[numCount]);
+                collectionOfPlayers = await collection.Find(filter).Project(projection).FirstOrDefaultAsync();
 
 
-               
-                    listOfPlayers[numCount] = collectionOfPlayers["Ign"].ToString() + " " + collectionOfPlayers["Rank"].ToString();
-                    numCount++;
-                }
-           // }
+
+                listOfPlayers[numCount] = collectionOfPlayers["Ign"].ToString() + " " + collectionOfPlayers["Rank"].ToString();
+                numCount++;
+            }
+            // }
             Console.WriteLine(listOfPlayers);
 
-            
+
             return listOfPlayers;
 
         }
@@ -853,7 +865,7 @@ namespace DiscordBotApp
 
             //makes sure getting collection of two teams
             var collectionChallenges = database.GetCollection<BsonDocument>("Challenges");
-            
+
 
 
             var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
@@ -868,7 +880,7 @@ namespace DiscordBotApp
             FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap);
 
 
-            
+
 
             //checks if challenge exists either way
 
@@ -878,7 +890,7 @@ namespace DiscordBotApp
 
             var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
 
-            if(checkChallengeExists != null)
+            if (checkChallengeExists != null)
             {
                 match.Challenger = checkChallengeExists["Challenger"].ToString();
                 match.Challengee = checkChallengeExists["Challengee"].ToString();
@@ -888,7 +900,7 @@ namespace DiscordBotApp
                 await DeleteChallenge(team, opposingTeam, true);
                 return match;
             }
-            else if(checkChallengeExistsSwap != null)
+            else if (checkChallengeExistsSwap != null)
             {
                 match.Challenger = checkChallengeExistsSwap["Challengee"].ToString();
                 match.Challengee = checkChallengeExistsSwap["Challenger"].ToString();
@@ -933,7 +945,7 @@ namespace DiscordBotApp
                 {"Result", match.Result },
                 {"PicsOfGames", pics},
                 {"WhichTeamScheduled",  match.WhichTeamSchedule  },
-                
+
 
 
 
@@ -949,7 +961,7 @@ namespace DiscordBotApp
         }
 
 
-        public async Task<bool> confirmSchedule(string team, string opposingTeam, string status,string calendarId)
+        public async Task<bool> confirmSchedule(string team, string opposingTeam, string status, string calendarId)
         {
             string mongoKey;
             mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
@@ -988,7 +1000,7 @@ namespace DiscordBotApp
                 BsonElement allowConfirm;
                 checkingMatches.TryGetElement("WhichTeamScheduled", out allowConfirm);
 
-                if (team != allowConfirm.Value.ToString()) 
+                if (team != allowConfirm.Value.ToString())
                 {
                     var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", status).Set("CalendarId", calendarId);
 
@@ -1015,12 +1027,12 @@ namespace DiscordBotApp
             }
             Console.WriteLine("what");
             return false;
-            
+
 
         }
 
         //gets info on certain team
-        public async Task <BsonDocument> infoTeam(string team)
+        public async Task<BsonDocument> infoTeam(string team)
         {
 
             string mongoKey;
@@ -1037,7 +1049,7 @@ namespace DiscordBotApp
             var teamProjection = Builders<BsonDocument>.Projection.Exclude("_id");
             //gets specific team
             var teamFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
-           
+
             // var document = collection.Find(new BsonDocument()).Project(projection).FirstOrDefault();
             BsonDocument document = teamCollection.Find(teamFilter).Project(teamProjection).FirstOrDefault();
 
@@ -1103,16 +1115,16 @@ namespace DiscordBotApp
             var database = client.GetDatabase("StyleData");
 
 
-            
+
             var collectionTeam = database.GetCollection<BsonDocument>("Team");
             //results
             var filter = Builders<BsonDocument>.Filter.Eq("TeamName", teamName);
-            
-            
+
+
             var eloUpdate = await collectionTeam.Find(filter).FirstOrDefaultAsync();
 
-            
-            var update = new UpdateDefinitionBuilder<BsonDocument>().Inc("WinsThisSeason", timesToRunWin).Inc("LossesThisSeason", timesToRunLose).Inc("TotalWins", timesToRunWin).Inc("TotalLosses",timesToRunLose);
+
+            var update = new UpdateDefinitionBuilder<BsonDocument>().Inc("WinsThisSeason", timesToRunWin).Inc("LossesThisSeason", timesToRunLose).Inc("TotalWins", timesToRunWin).Inc("TotalLosses", timesToRunLose);
             var options = new FindOneAndUpdateOptions<BsonDocument>();
             options.ReturnDocument = ReturnDocument.After;
 
@@ -1121,15 +1133,15 @@ namespace DiscordBotApp
             //updates number of challenges on team documents
             var result = await collectionTeam.FindOneAndUpdateAsync(eloUpdate, update, options);
             Console.WriteLine(result);
-            
+
             return true;
         }
 
         public async Task<List<string>> GetRanks()
         {
             List<string> nameAndElo = new List<string>();
-            
-            
+
+
             int elementPlaced = 0;
             int numUp = 0;
             int numUpRank = 1;
@@ -1146,9 +1158,9 @@ namespace DiscordBotApp
 
             var teamFilter = Builders<BsonDocument>.Filter.Eq("Paid", true);
 
-            var checkTeamExists = await collection.Find(teamFilter).SortByDescending(x=> x["Elo"]).ToListAsync();
+            var checkTeamExists = await collection.Find(teamFilter).SortByDescending(x => x["Elo"]).ToListAsync();
 
-            string[] holdNameAndElo = new string[checkTeamExists.Count/25 + 1];
+            string[] holdNameAndElo = new string[checkTeamExists.Count / 25 + 1];
             for (int i = 0; i < holdNameAndElo.Length; i++)
             {
                 holdNameAndElo[i] = "";
@@ -1161,10 +1173,10 @@ namespace DiscordBotApp
                     elementPlaced++;
                     numUp = 0;
                 }
-                holdNameAndElo[elementPlaced] = holdNameAndElo[elementPlaced].ToString() + $"\n{numUpRank}. "+ row["TeamName"].ToString() + ": " + Math.Round(row["Elo"].ToDouble(), 1).ToString();
+                holdNameAndElo[elementPlaced] = holdNameAndElo[elementPlaced].ToString() + $"\n{numUpRank}. " + row["TeamName"].ToString() + ": " + Math.Round(row["Elo"].ToDouble(), 1).ToString();
                 numUp++;
                 numUpRank++;
-                
+
             }
             if (numUp < 25)
             {
@@ -1193,7 +1205,7 @@ namespace DiscordBotApp
             var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", name);
             var paidChallenge = Builders<BsonDocument>.Filter.Eq("Paid", true);
             var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
-            
+
             challengerElo = Math.Round(documentCalledTeam["Elo"].ToDouble(), 1);
 
             var document = await collection.Find(paidChallenge).SortByDescending(x => x["Elo"]).ToListAsync();
@@ -1236,10 +1248,12 @@ namespace DiscordBotApp
             channels[0] = documentCalledTeam["TeamTextChannel"].ToString();
             channels[1] = documentCalledTeam["TeamVoiceChannel"].ToString();
 
-            if(channels[0] == null || channels[1] == null){
+            if (channels[0] == null || channels[1] == null)
+            {
                 return null;
             }
-            else {
+            else
+            {
                 var updateDocument = Builders<BsonDocument>.Update.Set("Paid", false);
                 var updateTextChannel = Builders<BsonDocument>.Update.Set("TeamTextChannel", "");
                 var updateVoiceChannel = Builders<BsonDocument>.Update.Set("TeamVoiceChannel", "");
@@ -1249,6 +1263,155 @@ namespace DiscordBotApp
                 return channels;
             }
 
+        }
+
+        public async Task<List<int>> RemovePlayer(string name, string ign)
+        {
+            try
+            {
+                string mongoKey;
+                mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+
+
+
+                var connectionString = mongoKey;
+                var client = new MongoClient(connectionString);
+                var database = client.GetDatabase("StyleData");
+                //starts a collection
+                var collection = database.GetCollection<BsonDocument>("Team");
+                var filter = Builders<BsonDocument>.Filter.Eq("TeamName", name);
+                var checkTeamExists = await collection.Find(filter).FirstOrDefaultAsync();
+                var update = Builders<BsonDocument>.Update.Set("PlaceHolder","");
+
+                List<int> subPosition = new List<int>();
+                
+
+                if (checkTeamExists["Top"].AsString == ign) 
+                {
+                    subPosition.Add(-1);
+                    update = Builders<BsonDocument>.Update.Set("Top", "none");
+                }
+                else if(checkTeamExists["Jg"].AsString == ign)
+                {
+                    subPosition.Add(-1);
+                    update = Builders<BsonDocument>.Update.Set("Jg", "none");
+                }
+                else if (checkTeamExists["Mid"].AsString == ign)
+                {
+                    subPosition.Add(-1);
+                    update = Builders<BsonDocument>.Update.Set("Mid", "none");
+                }
+                else if (checkTeamExists["Adc"].AsString == ign)
+                {
+                    subPosition.Add(-1);
+                    update = Builders<BsonDocument>.Update.Set("Adc", "none");
+                }
+                else if (checkTeamExists["Sup"].AsString == ign)
+                {
+                    subPosition.Add(-1);
+                    update = Builders<BsonDocument>.Update.Set("Sup", "none");
+                }
+                else if (checkTeamExists["Subs"].AsBsonArray.Contains(ign))
+                {
+                    subPosition.Add(checkTeamExists["Subs"].AsBsonArray.IndexOf(ign));
+                    subPosition.Add(checkTeamExists["Subs"].AsBsonArray.Count);
+                    update = Builders<BsonDocument>.Update.Pull("Subs", ign);
+                }
+                else
+                {
+                    subPosition.Add(-1);
+                    return subPosition;
+                }
+
+
+                
+                
+                await collection.UpdateOneAsync(filter, update);
+                return subPosition;
+
+            }
+            catch
+            {
+                Console.WriteLine("something went wrong");
+                return null;
+            }
+        }
+        public async Task RemovePlayer(string name, string role, IList<object> lists)
+        {
+            try
+            {
+                string mongoKey;
+                mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+
+
+
+                var connectionString = mongoKey;
+                var client = new MongoClient(connectionString);
+                var database = client.GetDatabase("StyleData");
+                //starts a collection
+                var collection = database.GetCollection<BsonDocument>("Team");
+                var filter = Builders<BsonDocument>.Filter.Eq("TeamName", name);
+
+
+                var update = Builders<BsonDocument>.Update.Set(role, lists[0]);
+                if (role == "Subs")
+                {
+                    update = Builders<BsonDocument>.Update.Pull(role, lists[0]);
+                }
+                else
+                {
+                    update = Builders<BsonDocument>.Update.Set(role, lists[0]);
+                }
+                var updateTime = Builders<BsonDocument>.Update.Set("TeamLastCheckedForPlayers", DateTime.Now);
+                await collection.UpdateOneAsync(filter, update);
+
+            }
+            catch
+            {
+                Console.WriteLine("something went wrong");
+            }
+        }
+
+        public async Task<string> getIgnFromDiscord(string teamName, string discord)
+        {
+            try
+            {
+                string mongoKey;
+                mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+
+
+
+                var connectionString = mongoKey;
+                var client = new MongoClient(connectionString);
+                var database = client.GetDatabase("StyleData");
+                //starts a collection
+                var collection = database.GetCollection<BsonDocument>("Player");
+                var filter = Builders<BsonDocument>.Filter.Eq("DiscordName", discord);
+
+                var checkTeamExists = await collection.Find(filter).FirstOrDefaultAsync();
+
+                if (checkTeamExists != null)
+                {
+                    var update = Builders<BsonDocument>.Update.Set("CurrentTeam", "");
+                    await collection.UpdateOneAsync(filter, update);
+                    return checkTeamExists["Ign"].ToString();
+                }
+                else
+                {
+                    return null;
+                }
+
+                
+
+            }
+            catch
+            {
+                Console.WriteLine("something went wrong");
+                return null;
+            }
         }
     }
 }

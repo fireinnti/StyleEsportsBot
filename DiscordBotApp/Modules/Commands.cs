@@ -1511,14 +1511,7 @@ namespace DiscordBotApp.Modules
 
 
 
-                                bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
-                                bool teamInDataBase = await mongo.updateTeam(whatToChange);
-
-                                if (playerInDataBase && teamInDataBase)
-                                {
-                                    await ReplyAsync("Player has been inputted into the database and added to the team");
-                                }
-                                await ReplyAsync("Player has been inputted into the database and added to the team");
+                                
                                 Console.WriteLine("made it to yes answer");
                                 run = true;
                                 Console.WriteLine("made it to true");
@@ -1537,6 +1530,14 @@ namespace DiscordBotApp.Modules
                                     {
                                         if (numberOfSubs < 6)
                                         {
+                                            bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
+                                            bool teamInDataBase = await mongo.updateTeam(whatToChange);
+
+                                            if (playerInDataBase && teamInDataBase)
+                                            {
+                                                await ReplyAsync("Player has been inputted into the database and added to the team");
+                                            }
+
                                             var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn, numberOfSubs);
                                             await ReplyAsync(confirm + " successfully added to google sheet!");
                                             await calledUser.AddRoleAsync(team);
@@ -1552,6 +1553,14 @@ namespace DiscordBotApp.Modules
                                             }
                                             if (shouldWeOverwriteASub.ToString().ToLower() == "yes")
                                             {
+                                                bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
+                                                bool teamInDataBase = await mongo.updateTeam(whatToChange);
+
+                                                if (playerInDataBase && teamInDataBase)
+                                                {
+                                                    await ReplyAsync("Player has been inputted into the database and added to the team");
+                                                }
+
                                                 //what to do if they say yes :(
 
                                                 string oneMessage = null;
@@ -1587,6 +1596,7 @@ namespace DiscordBotApp.Modules
                                                     || numberOfAxedSub.ToString() == "5" || numberOfAxedSub.ToString() == "6")
                                                 {
                                                     int intNumberOfAxedSub = Int32.Parse(numberOfAxedSub.ToString());
+                                                    await mongo.RemovePlayer(team.Name, whatToChange[1].ToString(), values[intNumberOfAxedSub - 1]);
                                                     var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn, intNumberOfAxedSub - 1);
                                                     await ReplyAsync(confirm + " successfully added to google sheet!");
                                                     await calledUser.AddRoleAsync(team);
@@ -1619,6 +1629,13 @@ namespace DiscordBotApp.Modules
                                     }
                                     else
                                     {
+                                        bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
+                                        bool teamInDataBase = await mongo.updateTeam(whatToChange);
+
+                                        if (playerInDataBase && teamInDataBase)
+                                        {
+                                            await ReplyAsync("Player has been inputted into the database and added to the team");
+                                        }
 
 
                                         var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn);
@@ -1661,12 +1678,13 @@ namespace DiscordBotApp.Modules
             }
 
             //removes player from team
-            [Command("remove")]
+            [Command("remove",RunMode=RunMode.Async)]
             [Summary("!remove @team @player (removes role from player so they can't access the team channel)")]
             public async Task RemoveFromTeam(IRole role, IGuildUser removedUser)
             {
                 var channel = Context.Guild as SocketGuild;
-
+                var mongo = new MongoDB();
+                var google = new googleSheet();
 
                 var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the remove command to remove role  " + role + " from " + removedUser);
 
@@ -1680,9 +1698,64 @@ namespace DiscordBotApp.Modules
 
                 var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
+                
+
                 //checks if role admin or owner
                 if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(role))))
                 {
+                    string exists = await mongo.getIgnFromDiscord(role.Name, removedUser.ToString());
+
+                    if (exists != null)
+                    {
+                        
+                        List<int> potentialSubPosition = await mongo.RemovePlayer(role.ToString(), exists);
+
+                        if (potentialSubPosition[0] == -1)
+                        {
+                            Console.WriteLine("not a sub");
+                        }
+                        else
+                        {
+                            
+                            await google.RemoveSub(role.ToString(), potentialSubPosition);
+                        }
+                        await ReplyAsync("Deleted player from team");
+                    }
+                    else
+                    {
+                        await ReplyAsync("We do not have that discord name on file, please type the ign of the player you want to remove.");
+                        var ignFromInput = await NextMessageAsync();
+                        if(ignFromInput == null)
+                        {
+                            await ReplyAsync("Ign not entered, please try again");
+                        }
+                        else
+                        {
+                            exists = await mongo.playerIfNoDiscord(ignFromInput.ToString());
+                            if(exists != null)
+                            {
+                                List<int> potentialSubPosition = await mongo.RemovePlayer(role.ToString(), exists);
+
+                                if (potentialSubPosition[0] == -1)
+                                {
+                                    Console.WriteLine("not a sub");
+                                }
+                                else
+                                {
+                                    
+                                    await google.RemoveSub(role.ToString(), potentialSubPosition);
+                                }
+                                await ReplyAsync("Deleted player from team");
+
+                            }
+                            else
+                            {
+                                await ReplyAsync("Ign not in database, make sure to have correct one or contact admins if you're sure its correct. Please try again");
+                                return;
+                            }
+
+                        }
+                    }
                     await removedUser.RemoveRoleAsync(role);
                     await ReplyAndDeleteAsync("Role removed");
                 }
