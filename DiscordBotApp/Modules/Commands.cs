@@ -42,8 +42,6 @@ namespace DiscordBotApp.Modules
 
 {
 
-
-
     public class Challenges
     {
         public string Challenger = "";
@@ -122,6 +120,7 @@ namespace DiscordBotApp.Modules
     public class Commands
     {
 
+
         public class UserCommands : InteractiveBase
         {
 
@@ -132,7 +131,11 @@ namespace DiscordBotApp.Modules
                 _commands = service;
             }
 
-
+#if DEBUG
+            public bool work = false;
+#else
+        public bool work = true;
+#endif
 
 
             /*[Command("scrape")]
@@ -148,6 +151,12 @@ namespace DiscordBotApp.Modules
             [Summary("!captain @team (this will spit out captain of that team)")]
             public async Task Captain(IRole opposingTeam)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+
                 var roleName = opposingTeam.ToString();
                 Console.WriteLine(roleName);
                 //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
@@ -184,6 +193,11 @@ namespace DiscordBotApp.Modules
             [Summary("!team @teamname(this will create a team card that has stats and multi.opgg")]
             public async Task Team(IRole teamName)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 var channel = Context.Guild as SocketGuild;
                 var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the team command for " + teamName);
                 try
@@ -325,6 +339,11 @@ namespace DiscordBotApp.Modules
             [Summary("!setlogo @yourteam linktologo sets logo for your team. If it's offensive you'll get talked to by admins.")]
             public async Task SetLogo(IRole team ,params string[] url)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 try
                 {
                     var mongo = new MongoDB();
@@ -347,7 +366,8 @@ namespace DiscordBotApp.Modules
                     var userUsingCommand = Context.User as SocketGuildUser;
                     var isCaptain = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
                     var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if ((userUsingCommand.Roles.Contains(team) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin))
+                    var rolePermissionCaster = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Shoutcaster");
+                    if ((userUsingCommand.Roles.Contains(team) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin)|| userUsingCommand.Roles.Contains(rolePermissionCaster))
                     {
                         await ReplyAsync("Are you sure the url you provided is your teams logo? 'yes' or 'no'" + url[0].ToString());
 
@@ -379,6 +399,11 @@ namespace DiscordBotApp.Modules
             [Summary("!challenge @yourteam @otherteam (this will set a challenge between the teams)")]
             public async Task Challenge(IRole yourteam, IRole opposingTeam)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 try
                 {
                     var mongo = new MongoDB();
@@ -455,12 +480,12 @@ namespace DiscordBotApp.Modules
                                     {
 
 
-                                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match. After picking out a date for the match" +
+                                        await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() + "! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match. After picking out a date for the match" +
                                          " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                                     }
                                     else
                                     {
-                                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept. After picking out a date for the match" +
+                                        await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() + "!! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept. After picking out a date for the match" +
                                          " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
 
 
@@ -514,6 +539,11 @@ namespace DiscordBotApp.Modules
             [Summary("!deny @yourteam @otherteam (this will either delete an optional challenge or delete the challenge you created)")]
             public async Task DenyChallenge(IRole yourteam, IRole opposingTeam)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
 
                 string removeChallenge = "challenge";
                 string typeOfRemove = "challenge";
@@ -610,9 +640,15 @@ namespace DiscordBotApp.Modules
             [Summary("!confirmschedule @yourteam @otherteam confirms the schedule that the two teams picked out.")]
             public async Task ConfirmSchedule(IRole yourteam, IRole opposingTeam)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
 
                 MongoDB mongo = new MongoDB();
 
+                
                 string typeOfRemove = "preschedule";
                 string locationOfInput = "confirmedschedule";
                 var roleName = opposingTeam.ToString();
@@ -647,8 +683,14 @@ namespace DiscordBotApp.Modules
                         try
                         {
                             Console.WriteLine("made it into trying to schedule");
-                            //gets converted matchdate of opponents
-                            DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+                            //gets converted matchdate of opponents, from google sheet depreciating to database
+                            // DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+
+                            //gets from mongo
+
+                            DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
+
+
                             //DateTime stopper = DateTime.Parse("01/11/2021");
                             /* int resultDate = DateTime.Compare(convertedDate, stopper);
                              if(resultDate > 0)
@@ -676,7 +718,7 @@ namespace DiscordBotApp.Modules
 
                                         var channelb = await user.GetOrCreateDMChannelAsync();
 
-                                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + Context.User.Username + " of " + yourteam.ToString() + " confirmed your match on " + convertedDate + " est/edt.");
+                                        await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() +"! " + Context.User.Username + " of " + yourteam.ToString() + " confirmed your match on " + convertedDate + " est/edt.");
                                     }
 
                                 }
@@ -725,16 +767,21 @@ namespace DiscordBotApp.Modules
             }
 
 
-            [Command("schedule")]
+            [Command("schedule", RunMode =RunMode.Async)]
             [Summary("!schedule @yourteam @otherteam mm/ dd / yy HH:MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) creates schedule")]
             public async Task Schedule(IRole team1, IRole team2, params string[] time)
             {
-
+              //  if (work == false)
+               // {
+                  //  await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                   // return;
+                //}
 
                 MongoDB mongo = new MongoDB();
 
                 Matches match = new Matches();
 
+                string checkIfInSchedule = "confirmedschedule";
                 string locationOfInput = "pendingschedule";
                 string removeChallenge = "challenge";
                 string typeOfRemove = "challenge";
@@ -764,6 +811,8 @@ namespace DiscordBotApp.Modules
                 var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
                 var google = new googleSheet();
 
+                bool reschedule = false;
+
 
                 var rolePermissionAdmin = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                 var captainPermission = (userThatCalledSchedule as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
@@ -778,24 +827,81 @@ namespace DiscordBotApp.Modules
                     {
                         //makes sure that there is a pending scheduled match with mongo and 
                         match = await mongo.GetChallengeDetails(team1.Name, team2.Name);
-                        match.WhichTeamSchedule = team1.ToString();
-                        match.MatchStatus = locationOfInput;
-
-
-                        string[] confirmYourTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, false);
-                        string[] confirmOpposingTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, true);
-                        if (confirmYourTeamChallenge[0] == team2.ToString())
+                        if (match == null)
                         {
-                            Console.WriteLine("opposing team and confirm[0] are the same");
-                            positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
-                            positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
-                            howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
-                            howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                            match = await mongo.GetScheduleDetails(team1.Name, team2.Name, reschedule, "blank");
+
+                            match.WhichTeamSchedule = team1.ToString();
+                            match.MatchStatus = locationOfInput;
+                            string[] confirmYourTeam = google.Confirm(team1.ToString(), team2.ToString(), checkIfInSchedule, false);
+                            string[] confirmOpposingTeam = google.Confirm(team1.ToString(), team2.ToString(), checkIfInSchedule, true);
+
+                            
+                            if(match.MatchStatus == checkIfInSchedule || match.MatchStatus == "pendingschedule") {
+
+                                if (confirmYourTeam[0] == team2.Name)
+                                {
+                                    positionOfYourTeam = Int32.Parse(confirmYourTeam[1]);
+                                    positionOfOpposingTeam = Int32.Parse(confirmOpposingTeam[1]);
+                                    //have to add one since its erasing and adding at the same time.
+                                    howManyInListYourTeam = Int32.Parse(confirmYourTeam[2])+1;
+                                    howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2])+1;
+                                    string convertedDateOfScheduledMatch = google.GetMatchDate(team1.ToString(), false, positionOfYourTeam).ToString();
+                                    await ReplyAsync("You already have a game scheduled with this team for " + convertedDateOfScheduledMatch + " do you want to reschedule? 'yes' or ' no'");
+                                    Console.WriteLine("Previously scheduled match");
+                                    var nextReply = await NextMessageAsync();
+                                    if (nextReply.ToString().ToLower() == "yes")
+                                    {
+
+                                        reschedule = true;
+                                        
+
+                                    }
+                                    else if (nextReply.ToString().ToLower() == "no")
+                                    {
+                                        await ReplyAsync("Chose no, nothing done");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        await ReplyAsync("No valid answer given, please try again");
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    await ReplyAsync("Team not in schedule or challenge list");
+                                }
+
+                            }
+                            else
+                            {
+                                await ReplyAsync("Team not in schedule or challenge list");
+                                return;
+                            }
                         }
                         else
                         {
-                            await ReplyAsync("Team not in challenge list.");
-                            return;
+                            match.WhichTeamSchedule = team1.ToString();
+                            match.MatchStatus = locationOfInput;
+                            
+
+                            string[] confirmYourTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, false);
+                            string[] confirmOpposingTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, true);
+                            if (confirmYourTeamChallenge[0] == team2.ToString())
+                            {
+                                Console.WriteLine("opposing team and confirm[0] are the same");
+                                positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                                positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                                howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                                howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                            }
+
+                            else
+                            {
+                                await ReplyAsync("Team not in challenge list.");
+                                return;
+                            }
                         }
                     }
 
@@ -849,19 +955,34 @@ namespace DiscordBotApp.Modules
 
 
                     match.Scheduled = convertedDate.ToString();
-
-                    bool mongoSchedule = await mongo.Schedule(match);
-
-                    if (!mongoSchedule)
+                    bool mongoSchedule = false;
+                    if (!reschedule)
                     {
-                        await ReplyAsync("Failed to insert schedule into database.");
-                        return;
+                        mongoSchedule = await mongo.Schedule(match);
+                        if (!mongoSchedule)
+                        {
+                            await ReplyAsync("Failed to insert schedule into database.");
+                            return;
+                        }
                     }
+                    else
+                    {
+                        await mongo.GetScheduleDetails(team1.Name, team2.Name, reschedule, convertedDate.ToString());
+                    }
+
+                    
 
                     var scheduleSheet = google.Schedule(team1.ToString(), team2.ToString(), convertedDate, locationOfInput);
                     if (scheduleSheet == null)
                     {
-                        google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                        if (!reschedule)
+                        {
+                            google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                        }
+                        else
+                        {
+                            google.RemoveSchedule(team1.ToString(), positionOfYourTeam, howManyInListYourTeam, team2.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, "preschedule");
+                        }
                         foreach (var user in listOfUsers)
                         {
 
@@ -890,7 +1011,7 @@ namespace DiscordBotApp.Modules
                 }
                 else
                 {
-                    await ReplyAsync("You are not the captain of the first team " + team1.ToString() + " or and admin.");
+                    await ReplyAsync("You are not the captain of the first team " + team1.ToString() + " or an admin.");
                 }
             }
 
@@ -953,7 +1074,11 @@ namespace DiscordBotApp.Modules
 
             public async Task<string> teamRosterOld(IRole teamName)
             {
-
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return null;
+                }
 
                 //var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                 //if (user.Roles.Contains(rolePermissionAdmin))
@@ -1013,6 +1138,11 @@ namespace DiscordBotApp.Modules
             [Summary("!imposter @person")]
             public async Task imposter(IGuildUser user)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 await ReplyAsync(user.Username + " is acting kinda sus...");
 
             }
@@ -1031,7 +1161,11 @@ namespace DiscordBotApp.Modules
             [Summary("!testresult @yourteam @otherteam 2-0 (lets you check elo gain)")]
             public async Task TestResult(IRole team, IRole opponentTeam, string result)
             {
-
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 var user = Context.User as SocketGuildUser;
                 var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
 
@@ -1134,6 +1268,11 @@ namespace DiscordBotApp.Modules
             //[Command("checkign")]
             public async Task<string[]> CheckIgn(string accountId)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return null;
+                }
                 string riotkey;
                 riotkey = ConfigurationManager.AppSettings.Get("riotkey");
                 IRiotClient client = new RiotClient(new RiotClientSettings
@@ -1230,6 +1369,11 @@ namespace DiscordBotApp.Modules
             [Summary("!teamrange @team (gives list of teams that are in that elo range)")]
             public async Task teamEloRange(IRole team)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 Console.WriteLine("made it in");
                 MongoDB mongo = new MongoDB();
                 try
@@ -1245,7 +1389,11 @@ namespace DiscordBotApp.Modules
 
             public async Task<string> checkifRealRank(string rank)
             {
-
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return null;
+                }
 
                 switch (rank)
                 {
@@ -1318,7 +1466,11 @@ namespace DiscordBotApp.Modules
            ("!add @team role @player (add to team)")]
             public async Task addToTeam(IRole team, string role = "nope", IGuildUser calledUser = null)
             {
-
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 // commented out until start pushing database
                 //holds int for number of subs
                 int numberOfSubs = 0;
@@ -1554,9 +1706,9 @@ namespace DiscordBotApp.Modules
                                             if (shouldWeOverwriteASub.ToString().ToLower() == "yes")
                                             {
                                                 bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
-                                                bool teamInDataBase = await mongo.updateTeam(whatToChange);
+                                                
 
-                                                if (playerInDataBase && teamInDataBase)
+                                                if (playerInDataBase)
                                                 {
                                                     await ReplyAsync("Player has been inputted into the database and added to the team");
                                                 }
@@ -1597,6 +1749,7 @@ namespace DiscordBotApp.Modules
                                                 {
                                                     int intNumberOfAxedSub = Int32.Parse(numberOfAxedSub.ToString());
                                                     await mongo.RemovePlayer(team.Name, whatToChange[1].ToString(), values[intNumberOfAxedSub - 1]);
+                                                    bool teamInDataBase = await mongo.updateTeam(whatToChange);
                                                     var sendToGoogle = google.addToTeam(team.ToString(), role, confirm, rankOfIgn, intNumberOfAxedSub - 1);
                                                     await ReplyAsync(confirm + " successfully added to google sheet!");
                                                     await calledUser.AddRoleAsync(team);
@@ -1682,6 +1835,11 @@ namespace DiscordBotApp.Modules
             [Summary("!remove @team @player (removes role from player so they can't access the team channel)")]
             public async Task RemoveFromTeam(IRole role, IGuildUser removedUser)
             {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
                 var channel = Context.Guild as SocketGuild;
                 var mongo = new MongoDB();
                 var google = new googleSheet();
@@ -1768,7 +1926,11 @@ namespace DiscordBotApp.Modules
             public async Task Help()
             {
 
-
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
 
                 //List<CommandInfo> commands = _commands.Commands.
 
@@ -1846,7 +2008,12 @@ namespace DiscordBotApp.Modules
 
             public class adminCommands : InteractiveBase
             {
-                public CommandService _adminCommands;
+#if DEBUG
+            public bool work = false;
+#else
+        public bool work = true;
+#endif
+            public CommandService _adminCommands;
                 public adminCommands(CommandService service)
                 {
                     _adminCommands = service;
@@ -1856,7 +2023,12 @@ namespace DiscordBotApp.Modules
 
                 public async Task Migrate(IRole teamName)
                 {
-                    var user = Context.User as SocketGuildUser;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
                     {
@@ -2039,11 +2211,15 @@ namespace DiscordBotApp.Modules
                 [Command("AdminHelp")]
                 public async Task Help()
                 {
-                    
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
 
-                    
 
-                    EmbedBuilder embedBuilder = new EmbedBuilder();
+
+                EmbedBuilder embedBuilder = new EmbedBuilder();
 
                     string description = null;
                     foreach (var cmd in _adminCommands.Modules)
@@ -2107,6 +2283,7 @@ namespace DiscordBotApp.Modules
                  }*/
                 private RiotClientSettings GetTournamentSettings()
                 {
+
                     string riotkey;
                     riotkey = ConfigurationManager.AppSettings.Get("riotkey");
                     return new RiotClientSettings
@@ -2121,8 +2298,12 @@ namespace DiscordBotApp.Modules
                 [Command("key")]
                 public async Task Key()
                 {
-
-                    IRiotClient client = new RiotClient(GetTournamentSettings());
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                IRiotClient client = new RiotClient(GetTournamentSettings());
                     long tournamentProviderId = await client.CreateTournamentProviderAsync("http://207.148.13.35.vultr.com:80/", PlatformId.NA1, CancellationToken.None);
 
                     Assert.That(tournamentProviderId, Is.GreaterThan(0));
@@ -2138,12 +2319,17 @@ namespace DiscordBotApp.Modules
                 [Summary("!validateteam @teamname (adds them ongoing list on googlesheet for ranks)")]
                 public async Task Validate(IRole teamName)
                 {
-                    var user = Context.User as SocketGuildUser;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
                     {
                         var google = new googleSheet();
-                        google.TeamName(teamName.ToString());
+                       await google.TeamName(teamName.ToString());
                         google.Validate(teamName.ToString());
                         await ReplyAsync(teamName.ToString() + " added to ranking");
                     }
@@ -2153,14 +2339,18 @@ namespace DiscordBotApp.Modules
                 [Summary("Creates googlesheet for role")]
                 public async Task createSheet(IRole team)
                 {
-
-                    var user = Context.User as SocketGuildUser;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
                     {
                         var google = new googleSheet();
                         var run = google.CreateTeam(team.ToString());
-                        google.TeamName(team.ToString());
+                        await google.TeamName(team.ToString());
                         await ReplyAsync("Google sheet created.");
                     }
 
@@ -2173,8 +2363,12 @@ namespace DiscordBotApp.Modules
 
                 public async Task updateRanks()
                 {
-
-                    int numUp = 0;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                int numUp = 0;
 
                     MongoDB mongo = new MongoDB();
 
@@ -2270,10 +2464,16 @@ namespace DiscordBotApp.Modules
                 [Command("purge")]
                 [Alias("clean")]
                 [Summary("Downloads and removes X messages from the current channel.")]
-
+                
                 public async Task PurgeAsync(int amount)
                 {
-                    var channel = Context.Guild as SocketGuild;
+
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var channel = Context.Guild as SocketGuild;
                     var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the clean command");
 
                     var admin = Context.User as SocketGuildUser;
@@ -2341,9 +2541,13 @@ namespace DiscordBotApp.Modules
                 [Summary("!msg @role messagecontents (lets you message that role. Only use on roles with not a lot of people)")]
                 public async Task Msg(IRole role, [Remainder] string message)
                 {
-
-                    //logging purposes
-                    var channel = Context.Guild as SocketGuild;
+            if (work == false)
+            {
+                await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                return;
+            }
+            //logging purposes
+            var channel = Context.Guild as SocketGuild;
                     var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
 
                     var admin = Context.User as SocketGuildUser;
@@ -2387,8 +2591,13 @@ namespace DiscordBotApp.Modules
                 [Summary("!msguser @user (Lets you msg user)")]
                 public async Task MsgUser(IUser user, [Remainder] string message)
                 {
-                    //logging purposes
-                    var channel = Context.Guild as SocketGuild;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                //logging purposes
+                var channel = Context.Guild as SocketGuild;
                     var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command to " + user);
 
                     var admin = Context.User as SocketGuildUser;
@@ -2424,7 +2633,12 @@ namespace DiscordBotApp.Modules
                 [Summary("!result @winningteam @losingteam 2-0 pic pic pic (lets you input results)")]
                 public async Task Result(IRole team, IRole opponentTeam, string result, params string[] links)
                 {
-                    MongoDB mongo = new MongoDB();
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                MongoDB mongo = new MongoDB();
                     Team mongoTeam = new Team();
                     Matches mongoMatch = new Matches();
 
@@ -2579,7 +2793,7 @@ namespace DiscordBotApp.Modules
                                 await mongo.AddResults(team.ToString(), timesToRunWin, timesToRunLose);
                                 await mongo.AddResults(opponentTeam.ToString(), timesToRunLose, timesToRunWin);
 
-
+                                await mongo.changeMatchToResult(team.ToString(), opponentTeam.ToString());
 
                                 google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
                                 await ReplyAsync(team.ToString() + " elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
@@ -2605,7 +2819,12 @@ namespace DiscordBotApp.Modules
               ("!createteam @teamcaptain teamname (creates a team)")]
                 public async Task CreateTeam(IGuildUser calledUser, [Remainder] string teamNameBeingCreated)
                 {
-                    var channel = Context.Guild as SocketGuild;
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var channel = Context.Guild as SocketGuild;
                     var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the createteam command for " + teamNameBeingCreated);
 
                     var user = Context.User as SocketGuildUser;
@@ -2909,7 +3128,12 @@ namespace DiscordBotApp.Modules
                 [Summary("!deleteteam @teamname (deletes team from google sheet, removes them from ranklist, deletes text and voice channels)")]
                 public async Task DeleteTeam(IRole team)
                 {
-                    var google = new googleSheet();
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var google = new googleSheet();
                     var mongo = new mongo();
                     var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -2961,7 +3185,12 @@ namespace DiscordBotApp.Modules
                 [Summary("!elo @teamname (resets elo and bases it off of top 5 players)")]
                 public async Task CalculateElo(IRole team)
                 {
-                    var google = new googleSheet();
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var google = new googleSheet();
                     var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
@@ -3180,7 +3409,12 @@ namespace DiscordBotApp.Modules
                 //checks if team paid
                 public async Task checkPaid(IRole role)
                 {
-                    var mongo = new MongoDB();
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var mongo = new MongoDB();
                     var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
@@ -3205,7 +3439,12 @@ namespace DiscordBotApp.Modules
                 //changes team status to paid
                 public async Task paid(IRole role)
                 {
-                    var mongo = new MongoDB();
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var mongo = new MongoDB();
                     var user = Context.User as SocketGuildUser;
                     var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     if (user.Roles.Contains(rolePermissionAdmin))
@@ -3227,7 +3466,78 @@ namespace DiscordBotApp.Modules
                         }
                     }
                 }
+            [Command("rename", RunMode = RunMode.Async)]
+            [Summary("!rename @team newname (lets you rename a team")]
+            public async Task rename(IRole role, [Remainder] string newName)
+            {
+                //if (work == false)
+                //{
+                //    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                //    return;
+                //}
+                if(newName == null)
+                {
+                    await ReplyAsync("new name not typed");
+                    return;
+                }
+                var mongo = new MongoDB();
+                var google = new googleSheet();
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    await ReplyAsync("Are you sure you want to rename " + role.Name + " to " + newName + "? 'yes' or 'no'");
+                    var response = await NextMessageAsync();
+
+                    if(response == null)
+                    {
+                        await ReplyAsync("No answer");
+                        return;
+                    }
+                    if (response.ToString().ToLower() == "yes")
+                    {
+                       await google.renameTeam(role.Name, newName);
+                        
+                       await mongo.renameTeam(role.Name, newName);
+                       await google.TeamName(newName);
+                        try
+                        {
+                            string[] channelIds = await mongo.getChannelIds(role.Name);
+                            var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0]));
+                            var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]));
+                            await channelText.ModifyAsync(x => { x.Name = newName; });
+                            await channelVoice.ModifyAsync(x => { x.Name = newName; });
+                        }
+                        catch
+                        {
+                            Console.WriteLine("No channels to modify");
+                        }
+                        await role.ModifyAsync(x => { x.Name = newName; });
+                    }
+                    else if(response.ToString().ToLower() == "no")
+                    {
+                        await ReplyAsync("Okay, nothing changed");
+                        return;
+                    }
+                   
+
+                }
             }
+            ////[Command("temp", RunMode = RunMode.Async)]
+            
+            //////changes team status to paid
+            ////public async Task temp()
+            ////{
+               
+            ////    var mongo = new MongoDB();
+            ////    var user = Context.User as SocketGuildUser;
+            ////    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+            ////    if (user.Roles.Contains(rolePermissionAdmin))
+            ////    {
+            ////        await mongo.temp();
+            ////    }
+            ////}
+        }
 
         }
     }

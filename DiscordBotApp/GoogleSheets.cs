@@ -1885,7 +1885,7 @@ namespace DiscordBotApp
 
 
             //creates team name
-            public void TeamName(string teamName)
+            public async Task TeamName(string teamName)
             {
                 UserCredential credential;
 
@@ -1932,7 +1932,7 @@ namespace DiscordBotApp
 
 
                 // To execute asynchronously in an async method, replace `request.Execute()` as shown:
-                Data.UpdateValuesResponse response = request.Execute();
+                Data.UpdateValuesResponse response = await request.ExecuteAsync();
                 // Data.UpdateValuesResponse response = await request.ExecuteAsync();
 
                 // TODO: Change code below to process the `response` object:
@@ -2371,6 +2371,79 @@ namespace DiscordBotApp
                 await service.Spreadsheets.BatchUpdate(updater, googleSheetUrl).ExecuteAsync();
 
 
+            }
+            public async Task renameTeam(string team, string newName)
+            {
+                Console.WriteLine("renameteam");
+                UserCredential credential;
+
+                using (var stream =
+                    new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+                {
+                    // The file token.json stores the user's access and refresh tokens, and is created
+                    // automatically when the authorization flow completes for the first time.
+                    string credPath = "token.json";
+                    credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        Scopes,
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Console.WriteLine("Credential file saved to: " + credPath);
+                }
+
+                // Create Google Sheets API service.
+                var service = new SheetsService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credential,
+                    ApplicationName = ApplicationName,
+                });
+
+                //get token of sheet url
+                string googleSheetUrl;
+                googleSheetUrl = ConfigurationManager.AppSettings.Get("googleSheetUrl");
+
+
+
+
+
+
+                var getSheetId = service.Spreadsheets.Get(googleSheetUrl).Execute().Sheets.First(x => x.Properties.Title.Equals(team));
+
+
+
+
+                // Define request parameters.
+
+                //String range = teamName;
+
+
+                var newSheet = new Request
+                {
+
+                    UpdateSheetProperties = new UpdateSheetPropertiesRequest
+                    {
+
+                        Properties = new SheetProperties()
+                        {
+                            Title = newName,
+                            SheetId = getSheetId.Properties.SheetId
+                            
+                        },
+                        Fields = "Title"
+                        
+                        
+
+
+
+                    }
+                };
+                var updater = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { newSheet } };
+               
+                 await service.Spreadsheets.BatchUpdate(updater, googleSheetUrl).ExecuteAsync();
+
+                
+                TeamName(newName);
             }
         }
     }

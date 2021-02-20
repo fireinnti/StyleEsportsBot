@@ -850,6 +850,11 @@ namespace DiscordBotApp
 
         }
 
+        public async Task<DateTime> GetMatchDate(string currenMatch, string name1, object name2)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<matches> GetChallengeDetails(string team, string opposingTeam)
         {
             string mongoKey;
@@ -908,6 +913,88 @@ namespace DiscordBotApp
                 match.ChallengeeId = checkChallengeExistsSwap["ChallengerId"].ToString();
 
                 await DeleteChallenge(team, opposingTeam, true);
+                return match;
+            }
+            return null;
+        }
+        //gets schedule details
+        public async Task<matches> GetScheduleDetails(string team, string opposingTeam, bool reschedule, string date)
+        {
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            //creates matches object
+            matches match = new matches();
+
+            var database = client.GetDatabase("StyleData");
+
+            //makes sure getting collection of two teams
+            var collectionChallenges = database.GetCollection<BsonDocument>("Matches");
+
+
+
+            var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
+            var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
+
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee);
+            var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
+
+
+            var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
+            var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap);
+
+
+
+
+            //checks if challenge exists either way
+
+
+
+
+
+            var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
+
+            if (checkChallengeExists != null)
+            {
+                if(checkChallengeExists["MatchStatus"].ToString() == "finishedmatch")
+                {
+                    return null;
+                }
+                match.Challenger = checkChallengeExists["Challenger"].ToString();
+                match.Challengee = checkChallengeExists["Challengee"].ToString();
+                match.ChallengerId = checkChallengeExists["ChallengerId"].ToString();
+                match.ChallengeeId = checkChallengeExists["ChallengeeId"].ToString();
+
+                if (reschedule)
+                {
+                    var updateDocument = Builders<BsonDocument>.Update.Set("Scheduled", date);
+
+                    await collectionChallenges.UpdateOneAsync(combineFilters, updateDocument);
+                }
+                return match;
+            }
+            else if (checkChallengeExistsSwap != null)
+            {
+
+                if (checkChallengeExistsSwap["MatchStatus"].ToString() == "finishedmatch")
+                {
+                    return null;
+                }
+                match.Challenger = checkChallengeExistsSwap["Challengee"].ToString();
+                match.Challengee = checkChallengeExistsSwap["Challenger"].ToString();
+                match.ChallengerId = checkChallengeExistsSwap["ChallengeeId"].ToString();
+                match.ChallengeeId = checkChallengeExistsSwap["ChallengerId"].ToString();
+
+                if (reschedule)
+                {
+                    var updateDocument = Builders<BsonDocument>.Update.Set("Scheduled", date);
+
+                    await collectionChallenges.UpdateOneAsync(combineFiltersSwap, updateDocument);
+                }
                 return match;
             }
             return null;
@@ -981,14 +1068,15 @@ namespace DiscordBotApp
 
             var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
             var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
+            var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", "pendingschedule");
 
-            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee);
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterSchedule);
             var checkingMatches = await collectionMatches.Find(combineFilters).FirstOrDefaultAsync();
 
 
             var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
             var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
-            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap);
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap, filterSchedule);
             var checkingMatchesSwap = await collectionMatches.Find(combineFiltersSwap).FirstOrDefaultAsync();
 
 
@@ -1002,9 +1090,12 @@ namespace DiscordBotApp
 
                 if (team != allowConfirm.Value.ToString())
                 {
-                    var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", status).Set("CalendarId", calendarId);
+                    if (calendarId != "")
+                    {
+                        var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", status).Set("CalendarId", calendarId);
 
-                    await collectionMatches.UpdateOneAsync(combineFilters, updateDocument);
+                        await collectionMatches.UpdateOneAsync(combineFilters, updateDocument);
+                    }
                     return true;
                 }
 
@@ -1018,9 +1109,12 @@ namespace DiscordBotApp
 
                 if (team != allowConfirm.Value.ToString())
                 {
-                    var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", status).Set("CalendarId", calendarId);
+                    if (calendarId != "")
+                    {
+                        var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", status).Set("CalendarId", calendarId);
 
-                    await collectionMatches.UpdateOneAsync(combineFiltersSwap, updateDocument);
+                        await collectionMatches.UpdateOneAsync(combineFiltersSwap, updateDocument);
+                    }
                     return true;
                 }
                 return false;
@@ -1072,7 +1166,50 @@ namespace DiscordBotApp
 
             return document;
         }
+        public async Task temp()
+        {
 
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+            Console.WriteLine(client);
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var teamCollection = database.GetCollection<BsonDocument>("Team");
+            var matchCollection = database.GetCollection<BsonDocument>("Matches");
+            var playerCollection = database.GetCollection<BsonDocument>("Player");
+            //filters unneeded stored info
+            var teamProjection = Builders<BsonDocument>.Projection.Exclude("_id");
+            //gets specific team
+            
+
+            // var document = collection.Find(new BsonDocument()).Project(projection).FirstOrDefault();
+            // BsonDocument document = teamCollection.Find(teamFilter).Project(teamProjection).FirstOrDefault();
+
+
+            //used to add to all collection
+
+            var teamAll = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
+            BsonDocument document = await matchCollection.Find(teamAll).FirstOrDefaultAsync();
+
+
+            var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", "finishedmatch");
+
+            await matchCollection.UpdateManyAsync(teamAll, updateDocument);
+            //FilterDefinitionBuilder<BsonDocument> builder = Builders<BsonDocument>.Filter;
+            //FilterDefinition<BsonDocument> filter = builder.Eq("Ign", document["Top"]) & builder.Eq("Ign", document["Jg"]) & builder.Eq("Ign", document["Mid"]) & builder.Eq("Ign", document["Adc"]) & builder.Eq("Ign", document["Sup"]);
+
+
+            // var listOfPlayers = playerCollection.Find(filter).FirstOrDefault();
+
+
+
+            // Console.WriteLine(listOfPlayers);
+
+            return;
+        }
         public async Task<bool> InputElo(string teamName, double finishedElo)
         {
             string mongoKey;
@@ -1116,6 +1253,8 @@ namespace DiscordBotApp
 
 
 
+
+
             var collectionTeam = database.GetCollection<BsonDocument>("Team");
             //results
             var filter = Builders<BsonDocument>.Filter.Eq("TeamName", teamName);
@@ -1136,8 +1275,62 @@ namespace DiscordBotApp
 
             return true;
         }
+        public async Task changeMatchToResult(string team, string opposingTeam)
+        {
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
 
-        public async Task<List<string>> GetRanks()
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            //creates matches object
+
+
+            var database = client.GetDatabase("StyleData");
+
+            //makes sure getting collection of two teams
+            var collectionChallenges = database.GetCollection<BsonDocument>("Matches");
+
+
+
+            var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
+            var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
+            var filterMatchStatus = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
+
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterMatchStatus);
+            var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
+
+
+            var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
+            var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap, filterMatchStatus);
+
+
+
+
+            //checks if challenge exists either way
+
+
+
+
+
+            var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
+
+            if (checkChallengeExists != null)
+            {
+                var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", "finishedmatch");
+                await collectionChallenges.UpdateOneAsync(combineFilters, updateDocument);
+            }
+            else if (checkChallengeExistsSwap != null)
+            {
+
+                var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", "finishedmatch");
+                await collectionChallenges.UpdateOneAsync(combineFiltersSwap, updateDocument);
+            }
+            return;
+        }
+
+            public async Task<List<string>> GetRanks()
         {
             List<string> nameAndElo = new List<string>();
 
@@ -1245,24 +1438,70 @@ namespace DiscordBotApp
             var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
             var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
 
-            channels[0] = documentCalledTeam["TeamTextChannel"].ToString();
-            channels[1] = documentCalledTeam["TeamVoiceChannel"].ToString();
-
+            try
+            {
+                channels[0] = documentCalledTeam["TeamTextChannel"].ToString();
+                channels[1] = documentCalledTeam["TeamVoiceChannel"].ToString();
+            }
+            catch
+            {
+                Console.WriteLine("Nothing there.");
+                return null;
+            }
             if (channels[0] == null || channels[1] == null)
             {
                 return null;
             }
             else
             {
-                var updateDocument = Builders<BsonDocument>.Update.Set("Paid", false);
-                var updateTextChannel = Builders<BsonDocument>.Update.Set("TeamTextChannel", "");
-                var updateVoiceChannel = Builders<BsonDocument>.Update.Set("TeamVoiceChannel", "");
-                await collection.UpdateOneAsync(challengerFilter, updateDocument);
-                await collection.UpdateOneAsync(challengerFilter, updateTextChannel);
-                await collection.UpdateOneAsync(challengerFilter, updateVoiceChannel);
+                
                 return channels;
             }
 
+        }
+        public async Task renameTeam(string team, string newName)
+        {
+            string[] channels = new string[2];
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+            //applies player object to new object in this task
+
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var collection = database.GetCollection<BsonDocument>("Team");
+            var collectionChallenges = database.GetCollection<BsonDocument>("Challenges");
+            var collectionMatches = database.GetCollection<BsonDocument>("Matches");
+            var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
+
+            var update= Builders<BsonDocument>.Update.Set("TeamName", newName);
+            await collection.UpdateOneAsync(challengerFilter, update);
+
+
+
+            
+            //updates name in challenges
+
+            var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
+
+
+            var updateChallenges = Builders<BsonDocument>.Update.Set("Challenger", newName);
+             await collectionChallenges.UpdateManyAsync(filterChallenger, updateChallenges);
+
+
+
+            var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
+
+
+            var updateChallengesSwap = Builders<BsonDocument>.Update.Set("Challengee", newName);
+            await collectionChallenges.UpdateManyAsync(filterChallengerSwap, updateChallengesSwap);
+            //updates name in matches
+
+            await collectionMatches.UpdateManyAsync(filterChallenger, updateChallenges);
+            await collectionMatches.UpdateManyAsync(filterChallengerSwap, updateChallengesSwap);
         }
 
         public async Task<List<int>> RemovePlayer(string name, string ign)
