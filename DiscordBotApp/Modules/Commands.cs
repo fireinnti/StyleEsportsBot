@@ -640,11 +640,11 @@ namespace DiscordBotApp.Modules
             [Summary("!confirmschedule @yourteam @otherteam confirms the schedule that the two teams picked out.")]
             public async Task ConfirmSchedule(IRole yourteam, IRole opposingTeam)
             {
-                if (work == false)
-                {
-                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
-                    return;
-                }
+                //if (work == false)
+                //{
+                //    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                //    return;
+                //}
 
                 MongoDB mongo = new MongoDB();
 
@@ -670,63 +670,63 @@ namespace DiscordBotApp.Modules
                 var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                 if ((userUsingCommand.Roles.Contains(yourteam) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin))
                 {
-
-
-                    if (confirmYourTeam[0] == opposingTeam.ToString())
+                    var confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, "");
+                    if (confirmMong)
                     {
-                        Console.WriteLine("opposing team and confirm[0] are the same");
-                        int positionOfYourTeam = Int32.Parse(confirmYourTeam[1]);
-                        int positionOfOpposingTeam = Int32.Parse(confirmOpposingTeam[1]);
-                        int howManyInListYourTeam = Int32.Parse(confirmYourTeam[2]);
-                        int howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2]);
-
-                        try
+                        if (confirmYourTeam[0] == opposingTeam.ToString())
                         {
-                            Console.WriteLine("made it into trying to schedule");
-                            //gets converted matchdate of opponents, from google sheet depreciating to database
-                            // DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+                            Console.WriteLine("opposing team and confirm[0] are the same");
+                            int positionOfYourTeam = Int32.Parse(confirmYourTeam[1]);
+                            int positionOfOpposingTeam = Int32.Parse(confirmOpposingTeam[1]);
+                            int howManyInListYourTeam = Int32.Parse(confirmYourTeam[2]);
+                            int howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2]);
 
-                            //gets from mongo
-
-                            DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
-
-
-                            //DateTime stopper = DateTime.Parse("01/11/2021");
-                            /* int resultDate = DateTime.Compare(convertedDate, stopper);
-                             if(resultDate > 0)
-                             {
-                                 await ReplyAsync("Won't schedule past the tenth, using that night to migrate matches and challenges to database.");
-                                 return;
-                             }*/
-
-
-
-                            var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
-                            if (scheduleSheet == null)
+                            try
                             {
-                                google.RemoveSchedule(yourteam.ToString(), positionOfYourTeam, howManyInListYourTeam, opposingTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
-                                //gets enemy captain and dms them
-                                foreach (var user in listOfUsers)
-                                {
+                                Console.WriteLine("made it into trying to schedule");
+                                //gets converted matchdate of opponents, from google sheet depreciating to database
+                                DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
 
-                                    var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
-                                    if (user.Roles.Contains(isCaptainOfEnemy))
+                                //gets from mongo
+
+                                //DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
+
+
+                                //DateTime stopper = DateTime.Parse("01/11/2021");
+                                /* int resultDate = DateTime.Compare(convertedDate, stopper);
+                                 if(resultDate > 0)
+                                 {
+                                     await ReplyAsync("Won't schedule past the tenth, using that night to migrate matches and challenges to database.");
+                                     return;
+                                 }*/
+
+
+
+                                var scheduleSheet = google.Schedule(yourteam.ToString(), opposingTeam.ToString(), convertedDate, locationOfInput);
+                                if (scheduleSheet == null)
+                                {
+                                    google.RemoveSchedule(yourteam.ToString(), positionOfYourTeam, howManyInListYourTeam, opposingTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, typeOfRemove);
+                                    //gets enemy captain and dms them
+                                    foreach (var user in listOfUsers)
                                     {
 
+                                        var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                                        if (user.Roles.Contains(isCaptainOfEnemy))
+                                        {
 
-                                        Console.WriteLine(user.Username + " is a captain");
 
-                                        var channelb = await user.GetOrCreateDMChannelAsync();
+                                            Console.WriteLine(user.Username + " is a captain");
 
-                                        await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() +"! " + Context.User.Username + " of " + yourteam.ToString() + " confirmed your match on " + convertedDate + " est/edt.");
+                                            var channelb = await user.GetOrCreateDMChannelAsync();
+
+                                            await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() + "! " + Context.User.Username + " of " + yourteam.ToString() + " confirmed your match on " + convertedDate + " est/edt.");
+                                        }
+
                                     }
 
-                                }
 
 
-                                var confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, "");
-                                if (confirmMong)
-                                {
+
                                     await ReplyAsync("Match has been confirmed for " + convertedDate + " est/edt");
                                     var calendar = new googleCalendar();
                                     var timeZone = "America/New_York";
@@ -734,28 +734,30 @@ namespace DiscordBotApp.Modules
 
                                     confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, id);
 
+
+
+                                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the confirm schedule command to confirm the match between " + yourteam.ToString() + " and " + opposingTeam.ToString() + " at " + convertedDate);
                                 }
+
                                 else
                                 {
-                                    await ReplyAsync("You are the team that scheduled, please have other team confirm");
+                                    await ReplyAsync(confirmYourTeam[0]);
+                                    return;
                                 }
-                                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the confirm schedule command to confirm the match between " + yourteam.ToString() + " and " + opposingTeam.ToString() + " at " + convertedDate);
                             }
-
-                            else
+                            catch
                             {
-                                await ReplyAsync(confirmYourTeam[0]);
-                                return;
+                                await ReplyAsync("Something went wrong, please contact admins.");
                             }
                         }
-                        catch
+                        else
                         {
                             await ReplyAsync("Something went wrong, please contact admins.");
                         }
                     }
                     else
                     {
-                        await ReplyAsync("Something went wrong, please contact admins.");
+                        await ReplyAsync("You are the team that scheduled, please have other team confirm");
                     }
 
 
