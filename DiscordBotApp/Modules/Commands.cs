@@ -9,6 +9,7 @@ using System.Net;
 using System.Linq;
 using System.Configuration;
 using System.Text;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Security.Cryptography.X509Certificates;
 using Discord.Rest;
@@ -481,12 +482,12 @@ namespace DiscordBotApp.Modules
 
 
                                         await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() + "! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this request is nonoptional. Please talk to " + userUsingCommand.Username + " to select a time for the match. After picking out a date for the match" +
-                                         " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                                         " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE:'!schedule @yourteam @enemyteam 02/28/21 8:00 pm est'");
                                     }
                                     else
                                     {
                                         await channelb.SendMessageAsync($"Hello, {user.Username} from " + opposingTeam.ToString() + "!! " + Context.User.ToString() + " of " + yourteam.ToString() + " has challenged you, this challenge is optional. If you would like you can !denychallenge @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " Please talk to " + userUsingCommand.Username + "to select a time for the match if you chooose to accept. After picking out a date for the match" +
-                                         " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                                         " please use the !schedule command with the format of !schedule @" + opposingTeam.ToString() + " @" + yourteam.ToString() + " mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE:'!schedule @yourteam @enemyteam 02/28/21 8:00 pm est'");
 
 
                                     }
@@ -685,13 +686,16 @@ namespace DiscordBotApp.Modules
                             {
                                 Console.WriteLine("made it into trying to schedule");
                                 //gets converted matchdate of opponents, from google sheet depreciating to database
-                                DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+                               // DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
 
                                 //gets from mongo
 
-                                //DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
+                                DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
 
-
+                                if (convertedDate == DateTime.Parse("0")){
+                                    await ReplyAsync("Issue with db scheduled date, please let innti know");
+                                    return;
+                                }
                                 //DateTime stopper = DateTime.Parse("01/11/2021");
                                 /* int resultDate = DateTime.Compare(convertedDate, stopper);
                                  if(resultDate > 0)
@@ -770,7 +774,7 @@ namespace DiscordBotApp.Modules
 
 
             [Command("schedule", RunMode =RunMode.Async)]
-            [Summary("!schedule @yourteam @otherteam mm/ dd / yy HH:MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) creates schedule")]
+            [Summary("!schedule @yourteam @otherteam mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE:'!schedule @yourteam @enemyteam 02/28/21 8:00 pm est' creates schedule")]
             public async Task Schedule(IRole team1, IRole team2, params string[] time)
             {
               //  if (work == false)
@@ -790,13 +794,16 @@ namespace DiscordBotApp.Modules
                 DateTime scheduledDate = DateTime.Parse("12/30/2020");
                 try
                 {
-                    scheduledDate = DateTime.Parse(time[0] + " " + time[1] + " " + time[2]);
+                    CultureInfo current = CultureInfo.CurrentCulture;
+                    string combinedParams = time[0] + " " + time[1] + " " + time[2];
+                    scheduledDate = DateTime.ParseExact(combinedParams,"MM/dd/yy h:mm tt", current);
                 }
-                catch
+                catch(FormatException)
                 {
-                    await ReplyAsync("Format needs to be mm/ dd / yy HH:MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                    await ReplyAsync("Format needs to be mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE: '!schedule @yourteam @enemyteam 02/28/21 8:00 pm est'");
                     return;
                 }
+                
                 DateTime convertedDate = DateTime.Parse("12/30/2020");
 
                 int numAddToDate = 0;
@@ -3505,8 +3512,8 @@ namespace DiscordBotApp.Modules
                         try
                         {
                             string[] channelIds = await mongo.getChannelIds(role.Name);
-                            var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0]));
-                            var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]));
+                            var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0])) as IGuildChannel;
+                            var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]))as IGuildChannel;
                             await channelText.ModifyAsync(x => { x.Name = newName; });
                             await channelVoice.ModifyAsync(x => { x.Name = newName; });
                         }
@@ -3515,6 +3522,7 @@ namespace DiscordBotApp.Modules
                             Console.WriteLine("No channels to modify");
                         }
                         await role.ModifyAsync(x => { x.Name = newName; });
+                        await ReplyAsync("Changed teamname ");
                     }
                     else if(response.ToString().ToLower() == "no")
                     {

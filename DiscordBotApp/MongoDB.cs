@@ -850,9 +850,61 @@ namespace DiscordBotApp
 
         }
 
-        public async Task<DateTime> GetMatchDate(string currenMatch, string name1, object name2)
+        public async Task<DateTime> GetMatchDate(string currenMatch, string team, string opposingTeam)
         {
-            throw new NotImplementedException();
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            //creates matches object
+            matches match = new matches();
+
+            var database = client.GetDatabase("StyleData");
+
+            //makes sure getting collection of two teams
+            var collectionChallenges = database.GetCollection<BsonDocument>("Matches");
+
+
+
+            var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
+            var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
+            var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", currenMatch);
+            
+
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterSchedule);
+            var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
+            
+
+            var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
+            var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap, filterSchedule);
+
+
+            var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
+
+            //checks if challenge exists either way
+
+            
+
+
+
+
+
+            if (checkChallengeExists != null)
+            {
+
+                return DateTime.Parse(checkChallengeExists["Scheduled"].ToString());
+                
+            }
+            else if (checkChallengeExistsSwap != null)
+            {
+
+
+                return DateTime.Parse(checkChallengeExistsSwap["Scheduled"].ToString());
+            }
+            return DateTime.Parse("0");
         }
 
         public async Task<matches> GetChallengeDetails(string team, string opposingTeam)
@@ -938,32 +990,39 @@ namespace DiscordBotApp
 
             var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
             var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
+            var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", "pendingschedule");
+            var filterScheduleConfirmed = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
 
-            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee);
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee,filterSchedule);
             var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
-
+            if(checkChallengeExists == null)
+            {
+                combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterScheduleConfirmed);
+                checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
+            }
 
             var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
             var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
-            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap);
-
-
-
-
-            //checks if challenge exists either way
-
-
-
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap,filterSchedule);
 
 
             var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
 
+            //checks if challenge exists either way
+
+            if (checkChallengeExistsSwap == null)
+            {
+                combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap, filterScheduleConfirmed);
+                checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
+            }
+
+
+
+           
+
             if (checkChallengeExists != null)
             {
-                if(checkChallengeExists["MatchStatus"].ToString() == "finishedmatch")
-                {
-                    return null;
-                }
+                
                 match.Challenger = checkChallengeExists["Challenger"].ToString();
                 match.Challengee = checkChallengeExists["Challengee"].ToString();
                 match.ChallengerId = checkChallengeExists["ChallengerId"].ToString();
@@ -980,10 +1039,7 @@ namespace DiscordBotApp
             else if (checkChallengeExistsSwap != null)
             {
 
-                if (checkChallengeExistsSwap["MatchStatus"].ToString() == "finishedmatch")
-                {
-                    return null;
-                }
+                
                 match.Challenger = checkChallengeExistsSwap["Challengee"].ToString();
                 match.Challengee = checkChallengeExistsSwap["Challenger"].ToString();
                 match.ChallengerId = checkChallengeExistsSwap["ChallengeeId"].ToString();
