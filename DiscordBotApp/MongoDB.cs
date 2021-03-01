@@ -30,9 +30,9 @@ namespace DiscordBotApp
             var collection = database.GetCollection<BsonDocument>("Player");
             //filters unneeded stored info
             var Filter = Builders<BsonDocument>.Filter.Eq("Ign", ign);
-            
+
             var document = collection.Find(Filter).FirstOrDefault();
-            if(document != null)
+            if (document != null)
             {
                 var update = Builders<BsonDocument>.Update.Set("CurrentTeam", "");
                 await collection.UpdateOneAsync(Filter, update);
@@ -43,7 +43,7 @@ namespace DiscordBotApp
             {
                 return null;
             }
-            
+
         }
 
         //change status to paid
@@ -871,11 +871,11 @@ namespace DiscordBotApp
             var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
             var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", opposingTeam);
             var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", currenMatch);
-            
+
 
             FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterSchedule);
             var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
-            
+
 
             var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
             var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
@@ -886,7 +886,7 @@ namespace DiscordBotApp
 
             //checks if challenge exists either way
 
-            
+
 
 
 
@@ -896,7 +896,7 @@ namespace DiscordBotApp
             {
 
                 return DateTime.Parse(checkChallengeExists["Scheduled"].ToString());
-                
+
             }
             else if (checkChallengeExistsSwap != null)
             {
@@ -993,9 +993,9 @@ namespace DiscordBotApp
             var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", "pendingschedule");
             var filterScheduleConfirmed = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
 
-            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee,filterSchedule);
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterSchedule);
             var checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
-            if(checkChallengeExists == null)
+            if (checkChallengeExists == null)
             {
                 combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterChallengee, filterScheduleConfirmed);
                 checkChallengeExists = await collectionChallenges.Find(combineFilters).FirstOrDefaultAsync();
@@ -1003,7 +1003,7 @@ namespace DiscordBotApp
 
             var filterChallengerSwap = Builders<BsonDocument>.Filter.Eq("Challenger", opposingTeam);
             var filterChallengeeSwap = Builders<BsonDocument>.Filter.Eq("Challengee", team);
-            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap,filterSchedule);
+            FilterDefinition<BsonDocument> combineFiltersSwap = Builders<BsonDocument>.Filter.And(filterChallengerSwap, filterChallengeeSwap, filterSchedule);
 
 
             var checkChallengeExistsSwap = await collectionChallenges.Find(combineFiltersSwap).FirstOrDefaultAsync();
@@ -1018,11 +1018,11 @@ namespace DiscordBotApp
 
 
 
-           
+
 
             if (checkChallengeExists != null)
             {
-                
+
                 match.Challenger = checkChallengeExists["Challenger"].ToString();
                 match.Challengee = checkChallengeExists["Challengee"].ToString();
                 match.ChallengerId = checkChallengeExists["ChallengerId"].ToString();
@@ -1039,7 +1039,7 @@ namespace DiscordBotApp
             else if (checkChallengeExistsSwap != null)
             {
 
-                
+
                 match.Challenger = checkChallengeExistsSwap["Challengee"].ToString();
                 match.Challengee = checkChallengeExistsSwap["Challenger"].ToString();
                 match.ChallengerId = checkChallengeExistsSwap["ChallengeeId"].ToString();
@@ -1239,7 +1239,7 @@ namespace DiscordBotApp
             //filters unneeded stored info
             var teamProjection = Builders<BsonDocument>.Projection.Exclude("_id");
             //gets specific team
-            
+
 
             // var document = collection.Find(new BsonDocument()).Project(projection).FirstOrDefault();
             // BsonDocument document = teamCollection.Find(teamFilter).Project(teamProjection).FirstOrDefault();
@@ -1386,7 +1386,7 @@ namespace DiscordBotApp
             return;
         }
 
-            public async Task<List<string>> GetRanks()
+        public async Task<List<string>> GetRanks()
         {
             List<string> nameAndElo = new List<string>();
 
@@ -1510,7 +1510,7 @@ namespace DiscordBotApp
             }
             else
             {
-                
+
                 return channels;
             }
 
@@ -1533,19 +1533,19 @@ namespace DiscordBotApp
             var challengerFilter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
             var documentCalledTeam = await collection.Find(challengerFilter).FirstOrDefaultAsync();
 
-            var update= Builders<BsonDocument>.Update.Set("TeamName", newName);
+            var update = Builders<BsonDocument>.Update.Set("TeamName", newName);
             await collection.UpdateOneAsync(challengerFilter, update);
 
 
 
-            
+
             //updates name in challenges
 
             var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
 
 
             var updateChallenges = Builders<BsonDocument>.Update.Set("Challenger", newName);
-             await collectionChallenges.UpdateManyAsync(filterChallenger, updateChallenges);
+            await collectionChallenges.UpdateManyAsync(filterChallenger, updateChallenges);
 
 
 
@@ -1577,17 +1577,17 @@ namespace DiscordBotApp
                 var collection = database.GetCollection<BsonDocument>("Team");
                 var filter = Builders<BsonDocument>.Filter.Eq("TeamName", name);
                 var checkTeamExists = await collection.Find(filter).FirstOrDefaultAsync();
-                var update = Builders<BsonDocument>.Update.Set("PlaceHolder","");
+                var update = Builders<BsonDocument>.Update.Set("PlaceHolder", "");
 
                 List<int> subPosition = new List<int>();
-                
 
-                if (checkTeamExists["Top"].AsString == ign) 
+
+                if (checkTeamExists["Top"].AsString == ign)
                 {
                     subPosition.Add(-1);
                     update = Builders<BsonDocument>.Update.Set("Top", "none");
                 }
-                else if(checkTeamExists["Jg"].AsString == ign)
+                else if (checkTeamExists["Jg"].AsString == ign)
                 {
                     subPosition.Add(-1);
                     update = Builders<BsonDocument>.Update.Set("Jg", "none");
@@ -1620,8 +1620,8 @@ namespace DiscordBotApp
                 }
 
 
-                
-                
+
+
                 await collection.UpdateOneAsync(filter, update);
                 return subPosition;
 
@@ -1699,7 +1699,7 @@ namespace DiscordBotApp
                     return null;
                 }
 
-                
+
 
             }
             catch

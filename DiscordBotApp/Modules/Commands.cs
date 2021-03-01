@@ -42,7 +42,7 @@ using NUnit.Framework;
 namespace DiscordBotApp.Modules
 
 {
-
+    //class that mirrors challenges in the mongodb
     public class Challenges
     {
         public string Challenger = "";
@@ -54,6 +54,7 @@ namespace DiscordBotApp.Modules
 
 
     }
+    //class that mirrors Team in the mongodb
     public class Team
     {
 
@@ -85,6 +86,7 @@ namespace DiscordBotApp.Modules
 
 
     }
+    //class that mirrors the player in mongodb
     public class Player
     {
         public string Rank = "";
@@ -99,7 +101,7 @@ namespace DiscordBotApp.Modules
         public List<string> PreviousTeams = new List<string>();
         public string DiscordName = "";
     }
-
+    //class that mirrors the matches in mongodb
     public class Matches
     {
         public string Challenger = "";
@@ -126,12 +128,12 @@ namespace DiscordBotApp.Modules
         {
 
             public CommandService _commands;
-
+            //gets all commands for usercommands
             public UserCommands(CommandService service)
             {
                 _commands = service;
             }
-
+            //creates bool if a command should work while in debug mode
 #if DEBUG
             public bool work = false;
 #else
@@ -148,25 +150,27 @@ namespace DiscordBotApp.Modules
 
             }*/
 
+            //spits out captain based off of given team
             [Command("captain")]
             [Summary("!captain @team (this will spit out captain of that team)")]
-            public async Task Captain(IRole opposingTeam)
+            public async Task Captain(IRole team)
             {
+                //checks if in debug mode
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
 
-                var roleName = opposingTeam.ToString();
+                var roleName = team.Name;
                 Console.WriteLine(roleName);
-                //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+                //grabs list of users by rolename
                 var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
                 string listOfCaptains = "";
 
                 foreach (var user in listOfUsers)
                 {
-
+                    //checks each user in certain role if they also have team captain role
                     var isCaptainOfEnemy = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
                     if (user.Roles.Contains(isCaptainOfEnemy))
                     {
@@ -192,25 +196,29 @@ namespace DiscordBotApp.Modules
             [Command("team")]
             [Alias("teamroster")]
             [Summary("!team @teamname(this will create a team card that has stats and multi.opgg")]
-            public async Task Team(IRole teamName)
+            public async Task Team(IRole team)
             {
+                //checks if in debug mode
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
+
                 var channel = Context.Guild as SocketGuild;
-                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the team command for " + teamName);
+                //gets specific text channel, channel log
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the team command for " + team);
                 try
                 {
+                    //access to mongodb.cs methods
                     var mongo = new mongo();
-
-                    BsonDocument teamData = await mongo.infoTeam(teamName.ToString());
+                    //bsondocument is similar to object
+                    BsonDocument teamData = await mongo.infoTeam(team.ToString());
 
                     int numCount = 5;
 
                     DateTime lastChecked = teamData["TeamLastCheckedForPlayers"].ToUniversalTime();
-
+                    //gets last checked for dates
                     var timeBetweenDays = DateTime.Now - lastChecked;
 
                     bool updateSheet = false;
@@ -223,7 +231,7 @@ namespace DiscordBotApp.Modules
                     }
 
                     string[] numberOfPlayers = new string[teamData["Subs"].AsBsonArray.Count() + 5];
-
+                    
                     numberOfPlayers[0] = teamData["Top"].ToString();
                     numberOfPlayers[1] = teamData["Jg"].ToString();
                     numberOfPlayers[2] = teamData["Mid"].ToString();
@@ -236,15 +244,16 @@ namespace DiscordBotApp.Modules
                     }
 
 
-
-                    string[] teamPlayers = await mongo.playerLookup(numberOfPlayers, updateSheet, teamName.Name);
+                    //looks up players by sending the numberOfPlayers array with each player into mongo.playerlookup. If The updatesheet is false, it skips updating the roster to save needing to check for roster changes every single call. Finally sends what team to lookup
+                    string[] teamPlayers = await mongo.playerLookup(numberOfPlayers, updateSheet, team.Name);
                     Console.WriteLine(teamPlayers[0].ToString());
+
                     string fullData = ("Name: " + teamData["TeamName"].ToString() + "\n" + "Elo: " + Math.Round(teamData["Elo"].ToDouble(), 1).ToString() + "\n" + "Season Record: " + teamData["WinsThisSeason"].ToString() + "/" + teamData["LossesThisSeason"] + "\n" + "Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n");
 
                     string playerData = "Top: " + teamPlayers[0] + "\n" + "Jungle: " + teamPlayers[1] + "\n" + "Mid: " + teamPlayers[2] + "\n" + "Adc: " + teamPlayers[3] + "\n" + "Sup: " + teamPlayers[4] + "\n";
 
 
-
+                    //checks if there are subs on the team
                     if (teamPlayers.Length > 5)
                     {
                         numCount = 1;
@@ -257,7 +266,7 @@ namespace DiscordBotApp.Modules
                     }
 
 
-                    //add all igns into singlestring
+                    //add all igns into single string
                     string stringOfIgns = null;
 
                     foreach (var row in numberOfPlayers)
@@ -279,13 +288,13 @@ namespace DiscordBotApp.Modules
                     {
                         logo = teamData["Logo"].ToString();
                     }
-
+                    //creates embeded with team information
                     var exampleAuthor = new EmbedAuthorBuilder()
                 .WithName("TeamCard")
 
                 .WithIconUrl("https://cdn.discordapp.com/attachments/643609428012040202/798093546178740224/GG_transparent.png");
 
-                    
+
 
                     var exampleField = new EmbedFieldBuilder()
                             .WithName("Name")
@@ -312,13 +321,13 @@ namespace DiscordBotApp.Modules
                     //  .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
                     var embed = new EmbedBuilder()
                             .AddField(exampleField)
-                            .WithThumbnailUrl(logo)                           
+                            .WithThumbnailUrl(logo)
                             .AddField(otherField)
                             .AddField(winLossField)
                            .AddField(playerField)
                            .AddField(multiField)
                             .WithAuthor(exampleAuthor);
-                            
+
 
 
 
@@ -331,14 +340,14 @@ namespace DiscordBotApp.Modules
                 {
                     await ReplyAsync("Not in database, using depreciated method until this team fixes it. This means their rank won't be accurate and we can't verify if all players exist.");
 
-                    string oldTeamRosterMethod = await teamRosterOld(teamName);
+                    string oldTeamRosterMethod = await teamRosterOld(team);
                     await ReplyAsync(oldTeamRosterMethod);
                 }
             }
 
-            [Command("setlogo", RunMode=RunMode.Async)]
+            [Command("setlogo", RunMode = RunMode.Async)]
             [Summary("!setlogo @yourteam linktologo sets logo for your team. If it's offensive you'll get talked to by admins.")]
-            public async Task SetLogo(IRole team ,params string[] url)
+            public async Task SetLogo(IRole team, params string[] url)
             {
                 if (work == false)
                 {
@@ -368,16 +377,16 @@ namespace DiscordBotApp.Modules
                     var isCaptain = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
                     var rolePermissionAdmin = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                     var rolePermissionCaster = (userUsingCommand as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Shoutcaster");
-                    if ((userUsingCommand.Roles.Contains(team) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin)|| userUsingCommand.Roles.Contains(rolePermissionCaster))
+                    if ((userUsingCommand.Roles.Contains(team) && userUsingCommand.Roles.Contains(isCaptain)) || userUsingCommand.Roles.Contains(rolePermissionAdmin) || userUsingCommand.Roles.Contains(rolePermissionCaster))
                     {
                         await ReplyAsync("Are you sure the url you provided is your teams logo? 'yes' or 'no'" + url[0].ToString());
 
                         var confirm = await NextMessageAsync();
 
-                        if(confirm.ToString().ToLower() == "yes")
+                        if (confirm.ToString().ToLower() == "yes")
                         {
-                           
-                            await mongo.setLogo(team.Name,url[0].ToString());
+
+                            await mongo.setLogo(team.Name, url[0].ToString());
                             await ReplyAsync("Logo set");
                         }
                         else
@@ -503,12 +512,12 @@ namespace DiscordBotApp.Modules
                             {
 
                                 await ReplyAsync("A NONOPTIONAL challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
-                                         " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                                         " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                             }
                             else
                             {
                                 await ReplyAsync("An OPTIONAL challenge has been issued to " + opposingTeam.ToString() + " and was sent to " + listOfCaptains + "After picking out a date for the match with the other captain" +
-                                         " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm / dd / yy HH: MM AM / PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
+                                         " please use the !schedule command with the format of !schedule @" + yourteam.ToString() + " @" + opposingTeam.ToString() + " mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt)");
                             }
                             var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the challenge command to challenge " + opposingTeam.ToString() + " with their team " + yourteam.ToString()); ;
                             return;
@@ -649,7 +658,7 @@ namespace DiscordBotApp.Modules
 
                 MongoDB mongo = new MongoDB();
 
-                
+
                 string typeOfRemove = "preschedule";
                 string locationOfInput = "confirmedschedule";
                 var roleName = opposingTeam.ToString();
@@ -686,16 +695,16 @@ namespace DiscordBotApp.Modules
                             {
                                 Console.WriteLine("made it into trying to schedule");
                                 //gets converted matchdate of opponents, from google sheet depreciating to database
-                               // DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
+                                // DateTime convertedDate = google.GetMatchDate(yourteam.ToString(), false, positionOfYourTeam);
 
                                 //gets from mongo
 
                                 DateTime convertedDate = await mongo.GetMatchDate("pendingschedule", yourteam.Name, opposingTeam.Name);
 
-                                if (convertedDate == DateTime.Parse("0")){
-                                    await ReplyAsync("Issue with db scheduled date, please let innti know");
-                                    return;
-                                }
+                                //if (convertedDate == DateTime.Parse("0")){
+                                //    await ReplyAsync("Issue with db scheduled date, please let innti know");
+                                //    return;
+                                //}
                                 //DateTime stopper = DateTime.Parse("01/11/2021");
                                 /* int resultDate = DateTime.Compare(convertedDate, stopper);
                                  if(resultDate > 0)
@@ -773,14 +782,14 @@ namespace DiscordBotApp.Modules
             }
 
 
-            [Command("schedule", RunMode =RunMode.Async)]
+            [Command("schedule", RunMode = RunMode.Async)]
             [Summary("!schedule @yourteam @otherteam mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE:'!schedule @yourteam @enemyteam 02/28/21 8:00 pm est' creates schedule")]
             public async Task Schedule(IRole team1, IRole team2, params string[] time)
             {
-              //  if (work == false)
-               // {
-                  //  await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
-                   // return;
+                //  if (work == false)
+                // {
+                //  await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                // return;
                 //}
 
                 MongoDB mongo = new MongoDB();
@@ -796,14 +805,14 @@ namespace DiscordBotApp.Modules
                 {
                     CultureInfo current = CultureInfo.CurrentCulture;
                     string combinedParams = time[0] + " " + time[1] + " " + time[2];
-                    scheduledDate = DateTime.ParseExact(combinedParams,"MM/dd/yy h:mm tt", current);
+                    scheduledDate = DateTime.ParseExact(combinedParams, "MM/dd/yy h:mm tt", current);
                 }
-                catch(FormatException)
+                catch (FormatException)
                 {
                     await ReplyAsync("Format needs to be mm/dd/yy HH:MM AM/PM timezone(est / edt, cst / cdt, pst / pdt, mst / mdt) EXAMPLE: '!schedule @yourteam @enemyteam 02/28/21 8:00 pm est'");
                     return;
                 }
-                
+
                 DateTime convertedDate = DateTime.Parse("12/30/2020");
 
                 int numAddToDate = 0;
@@ -845,16 +854,17 @@ namespace DiscordBotApp.Modules
                             string[] confirmYourTeam = google.Confirm(team1.ToString(), team2.ToString(), checkIfInSchedule, false);
                             string[] confirmOpposingTeam = google.Confirm(team1.ToString(), team2.ToString(), checkIfInSchedule, true);
 
-                            
-                            if(match.MatchStatus == checkIfInSchedule || match.MatchStatus == "pendingschedule") {
+
+                            if (match.MatchStatus == checkIfInSchedule || match.MatchStatus == "pendingschedule")
+                            {
 
                                 if (confirmYourTeam[0] == team2.Name)
                                 {
                                     positionOfYourTeam = Int32.Parse(confirmYourTeam[1]);
                                     positionOfOpposingTeam = Int32.Parse(confirmOpposingTeam[1]);
                                     //have to add one since its erasing and adding at the same time.
-                                    howManyInListYourTeam = Int32.Parse(confirmYourTeam[2])+1;
-                                    howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2])+1;
+                                    howManyInListYourTeam = Int32.Parse(confirmYourTeam[2]) + 1;
+                                    howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeam[2]) + 1;
                                     string convertedDateOfScheduledMatch = google.GetMatchDate(team1.ToString(), false, positionOfYourTeam).ToString();
                                     await ReplyAsync("You already have a game scheduled with this team for " + convertedDateOfScheduledMatch + " do you want to reschedule? 'yes' or ' no'");
                                     Console.WriteLine("Previously scheduled match");
@@ -863,7 +873,7 @@ namespace DiscordBotApp.Modules
                                     {
 
                                         reschedule = true;
-                                        
+
 
                                     }
                                     else if (nextReply.ToString().ToLower() == "no")
@@ -893,7 +903,7 @@ namespace DiscordBotApp.Modules
                         {
                             match.WhichTeamSchedule = team1.ToString();
                             match.MatchStatus = locationOfInput;
-                            
+
 
                             string[] confirmYourTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, false);
                             string[] confirmOpposingTeamChallenge = google.Confirm(team1.ToString(), team2.ToString(), removeChallenge, true);
@@ -979,7 +989,7 @@ namespace DiscordBotApp.Modules
                         await mongo.GetScheduleDetails(team1.Name, team2.Name, reschedule, convertedDate.ToString());
                     }
 
-                    
+
 
                     var scheduleSheet = google.Schedule(team1.ToString(), team2.ToString(), convertedDate, locationOfInput);
                     if (scheduleSheet == null)
@@ -1360,10 +1370,7 @@ namespace DiscordBotApp.Modules
                 }
 
 
-                //await ReplyAsync("Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank);
 
-
-                //Console.WriteLine(data);
 
 
 
@@ -1672,7 +1679,7 @@ namespace DiscordBotApp.Modules
 
 
 
-                                
+
                                 Console.WriteLine("made it to yes answer");
                                 run = true;
                                 Console.WriteLine("made it to true");
@@ -1715,7 +1722,7 @@ namespace DiscordBotApp.Modules
                                             if (shouldWeOverwriteASub.ToString().ToLower() == "yes")
                                             {
                                                 bool playerInDataBase = await mongo.inputPlayer(mongoPlayer, false);
-                                                
+
 
                                                 if (playerInDataBase)
                                                 {
@@ -1840,7 +1847,7 @@ namespace DiscordBotApp.Modules
             }
 
             //removes player from team
-            [Command("remove",RunMode=RunMode.Async)]
+            [Command("remove", RunMode = RunMode.Async)]
             [Summary("!remove @team @player (removes role from player so they can't access the team channel)")]
             public async Task RemoveFromTeam(IRole role, IGuildUser removedUser)
             {
@@ -1865,7 +1872,7 @@ namespace DiscordBotApp.Modules
 
                 var captainRole = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
 
-                
+
 
                 //checks if role admin or owner
                 if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)) || ((user.Roles.Contains(captainRole) && user.Roles.Contains(role))))
@@ -1874,7 +1881,7 @@ namespace DiscordBotApp.Modules
 
                     if (exists != null)
                     {
-                        
+
                         List<int> potentialSubPosition = await mongo.RemovePlayer(role.ToString(), exists);
 
                         if (potentialSubPosition[0] == -1)
@@ -1883,7 +1890,7 @@ namespace DiscordBotApp.Modules
                         }
                         else
                         {
-                            
+
                             await google.RemoveSub(role.ToString(), potentialSubPosition);
                         }
                         await ReplyAsync("Deleted player from team");
@@ -1892,14 +1899,14 @@ namespace DiscordBotApp.Modules
                     {
                         await ReplyAsync("We do not have that discord name on file, please type the ign of the player you want to remove.");
                         var ignFromInput = await NextMessageAsync();
-                        if(ignFromInput == null)
+                        if (ignFromInput == null)
                         {
                             await ReplyAsync("Ign not entered, please try again");
                         }
                         else
                         {
                             exists = await mongo.playerIfNoDiscord(ignFromInput.ToString());
-                            if(exists != null)
+                            if (exists != null)
                             {
                                 List<int> potentialSubPosition = await mongo.RemovePlayer(role.ToString(), exists);
 
@@ -1909,7 +1916,7 @@ namespace DiscordBotApp.Modules
                                 }
                                 else
                                 {
-                                    
+
                                     await google.RemoveSub(role.ToString(), potentialSubPosition);
                                 }
                                 await ReplyAsync("Deleted player from team");
@@ -2015,211 +2022,211 @@ namespace DiscordBotApp.Modules
             }
         }
 
-            public class adminCommands : InteractiveBase
-            {
+        public class adminCommands : InteractiveBase
+        {
 #if DEBUG
             public bool work = false;
 #else
         public bool work = true;
 #endif
             public CommandService _adminCommands;
-                public adminCommands(CommandService service)
-                {
-                    _adminCommands = service;
-                }
-                [Command("Migrate", RunMode = RunMode.Async)]
-                [Summary("not needed anymore, migrated old google sheet teams to new database")]
+            public adminCommands(CommandService service)
+            {
+                _adminCommands = service;
+            }
+            [Command("Migrate", RunMode = RunMode.Async)]
+            [Summary("not needed anymore, migrated old google sheet teams to new database")]
 
-                public async Task Migrate(IRole teamName)
-                {
+            public async Task Migrate(IRole teamName)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    try
                     {
-                        try
+                        await ReplyAsync("How many wins has this team had?");
+                        var responseToWins = await NextMessageAsync();
+
+                        Console.WriteLine(responseToWins);
+                        int wins = Int32.Parse(responseToWins.ToString());
+                        await ReplyAsync("How many losses has this team had?");
+                        var responseToLosses = await NextMessageAsync();
+                        int losses = Int32.Parse(responseToLosses.ToString());
+
+                        //gets riotkey from config
+                        string riotkey;
+                        riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+
+                        var teamNameWithoutNumber = teamName.Name;
+                        var google = new googleSheet();
+                        int numCount = 0;
+                        string[,] values = google.TeamRoster(teamNameWithoutNumber);
+                        decimal elo = google.GetElo(teamNameWithoutNumber);
+                        var mongo = new mongo();
+
+                        Console.WriteLine(values.Length);
+                        //assigning values to object properties for team migration, must go through player creation first to verify players and grab riot id
+                        // Player migratePlayer = new Player();
+
+                        //for loop to check each player
+                        for (int i = 0; i < 10; i++)
                         {
-                            await ReplyAsync("How many wins has this team had?");
-                            var responseToWins = await NextMessageAsync();
-
-                            Console.WriteLine(responseToWins);
-                            int wins = Int32.Parse(responseToWins.ToString());
-                            await ReplyAsync("How many losses has this team had?");
-                            var responseToLosses = await NextMessageAsync();
-                            int losses = Int32.Parse(responseToLosses.ToString());
-
-                            //gets riotkey from config
-                            string riotkey;
-                            riotkey = ConfigurationManager.AppSettings.Get("riotkey");
-
-                            var teamNameWithoutNumber = teamName.Name;
-                            var google = new googleSheet();
-                            int numCount = 0;
-                            string[,] values = google.TeamRoster(teamNameWithoutNumber);
-                            decimal elo = google.GetElo(teamNameWithoutNumber);
-                            var mongo = new mongo();
-
-                            Console.WriteLine(values.Length);
-                            //assigning values to object properties for team migration, must go through player creation first to verify players and grab riot id
-                            // Player migratePlayer = new Player();
-
-                            //for loop to check each player
-                            for (int i = 0; i < 10; i++)
+                            Player migratePlayer = new Player();
+                            string rankOfIgn;
+                            //initiales new riot lib
+                            IRiotClient client = new RiotClient(new RiotClientSettings
                             {
-                                Player migratePlayer = new Player();
-                                string rankOfIgn;
-                                //initiales new riot lib
-                                IRiotClient client = new RiotClient(new RiotClientSettings
+                                ApiKey = riotkey
+                            });
+                            try
+                            {
+                                Summoner summoner = await client.GetSummonerBySummonerNameAsync(values[i, 1].ToString(), PlatformId.NA1).ConfigureAwait(false); if (summoner == null)
                                 {
-                                    ApiKey = riotkey
-                                });
-                                try
+                                    await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again " + values[i, 1].ToString());
+                                    return;
+                                }
+                                else if (summoner != null)
                                 {
-                                    Summoner summoner = await client.GetSummonerBySummonerNameAsync(values[i, 1].ToString(), PlatformId.NA1).ConfigureAwait(false); if (summoner == null)
+
+
+
+                                    List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
+                                    Console.WriteLine(lists.ToString());
+
+                                    if (lists.Count() != 0 && lists[0].QueueType.Contains("RANKED_SOLO_5x5"))
                                     {
-                                        await ReplyAsync("Unfortnately, there isn't a player by that name. Please try again " + values[i, 1].ToString());
-                                        return;
-                                    }
-                                    else if (summoner != null)
-                                    {
-
-
-
-                                        List<LeagueEntry> lists = await client.GetLeagueEntriesBySummonerIdAsync(summoner.Id.ToString(), PlatformId.NA1).ConfigureAwait(false);
-                                        Console.WriteLine(lists.ToString());
-
-                                        if (lists.Count() != 0 && lists[0].QueueType.Contains("RANKED_SOLO_5x5"))
+                                        var loopThruElements = 0;
+                                        var rank = lists[loopThruElements];
+                                        while (rank.QueueType != "RANKED_SOLO_5x5")
                                         {
-                                            var loopThruElements = 0;
-                                            var rank = lists[loopThruElements];
-                                            while (rank.QueueType != "RANKED_SOLO_5x5")
-                                            {
-                                                loopThruElements++;
-                                                rank = lists[loopThruElements];
-                                            }
+                                            loopThruElements++;
+                                            rank = lists[loopThruElements];
+                                        }
 
 
-                                            await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
-                                            migratePlayer.Rank = rank.Tier + " " + rank.Rank;
+                                        await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + rank.Tier + " " + rank.Rank + " is this the correct? Reply with 'yes' or 'no'");
+                                        migratePlayer.Rank = rank.Tier + " " + rank.Rank;
+                                        migratePlayer.Ign = summoner.Name;
+                                        migratePlayer.SummonerId = summoner.Id;
+                                        migratePlayer.CurrentTeam = teamName.Name;
+
+                                        await mongo.inputPlayer(migratePlayer, false);
+                                        rankOfIgn = rank.Tier + " " + rank.Rank;
+
+                                    }
+                                    else
+                                    {
+                                        opggScraper rank = new opggScraper();
+                                        var whatRank = await rank.ScrapeMe(summoner.Name);
+                                        UserCommands userCmd = new UserCommands(null);
+                                        string isRealRank = await userCmd.checkifRealRank(whatRank.ToString().ToUpper());
+
+                                        if (isRealRank != null)
+                                        {
+                                            migratePlayer.Rank = isRealRank;
                                             migratePlayer.Ign = summoner.Name;
                                             migratePlayer.SummonerId = summoner.Id;
                                             migratePlayer.CurrentTeam = teamName.Name;
 
+
+                                            rankOfIgn = isRealRank;
+
                                             await mongo.inputPlayer(migratePlayer, false);
-                                            rankOfIgn = rank.Tier + " " + rank.Rank;
 
+                                            await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + isRealRank + "(from last season, they haven't finished promos this season) is this the correct? Reply with 'yes' or 'no'");
                                         }
-                                        else
-                                        {
-                                            opggScraper rank = new opggScraper();
-                                            var whatRank = await rank.ScrapeMe(summoner.Name);
-                                            UserCommands userCmd = new UserCommands(null);
-                                            string isRealRank = await userCmd.checkifRealRank(whatRank.ToString().ToUpper());
 
-                                            if (isRealRank != null)
-                                            {
-                                                migratePlayer.Rank = isRealRank;
-                                                migratePlayer.Ign = summoner.Name;
-                                                migratePlayer.SummonerId = summoner.Id;
-                                                migratePlayer.CurrentTeam = teamName.Name;
-
-
-                                                rankOfIgn = isRealRank;
-
-                                                await mongo.inputPlayer(migratePlayer, false);
-
-                                                await ReplyAsync("This is the player I found, " + "Name: " + summoner.Name + " Rank: " + isRealRank + "(from last season, they haven't finished promos this season) is this the correct? Reply with 'yes' or 'no'");
-                                            }
-
-                                        }
                                     }
                                 }
-                                catch
-                                {
-                                    await ReplyAsync("Done with creating player cards.");
-                                    break;
-                                }
-
-                            }
-
-
-                            await ReplyAsync("Done with creating player cards.");
-
-                            var channelText = Context.Guild as SocketGuild;
-                            var channelVoice = Context.Guild as SocketGuild;
-                            string changeStringToChannelParams = teamNameWithoutNumber.ToString().Replace(" ", "-").ToLower();
-                            string channelTextId = "";
-                            string channelVoiceId = "";
-                            try
-                            {
-                                channelTextId = channelText.TextChannels.FirstOrDefault(x => x.Name == changeStringToChannelParams).Id.ToString();
-                                channelVoiceId = channelText.VoiceChannels.FirstOrDefault(x => x.Name == teamNameWithoutNumber.ToString()).Id.ToString();
                             }
                             catch
                             {
-                                await ReplyAsync("Channel id not properly captured.");
+                                await ReplyAsync("Done with creating player cards.");
+                                break;
                             }
-                            Team migrateTeam = new Team();
-                            migrateTeam.Top = values[0, 1];
-                            migrateTeam.Jg = values[1, 1];
-                            migrateTeam.Mid = values[2, 1];
-                            migrateTeam.Adc = values[3, 1];
-                            migrateTeam.Sup = values[4, 1];
-                            migrateTeam.TeamName = teamNameWithoutNumber.ToString();
-                            migrateTeam.Elo = elo;
-                            migrateTeam.LossesThisSeason = losses;
-                            migrateTeam.TotalLosses = losses;
-                            migrateTeam.TotalWins = wins;
-                            migrateTeam.WinsThisSeason = wins;
-                            migrateTeam.TeamTextChannel = channelTextId;
-                            migrateTeam.TeamVoiceChannel = channelVoiceId;
-                            //runs for the subs
-                            for (int i = 5; i < 10; i++)
-                            {
-                                try
-                                {
-                                    if (values[i, 1].ToString() != null)
-                                    {
-                                        migrateTeam.Subs.Add(values[i, 1].ToString());
-                                        numCount++;
-                                    }
-                                }
-                                catch
-                                {
-                                    Console.WriteLine("done with array");
-                                }
 
-                            }
-                            Console.WriteLine(migrateTeam);
+                        }
 
-                            await mongo.inputTeam(migrateTeam);
 
-                            await ReplyAsync("Team successfully migrated.");
+                        await ReplyAsync("Done with creating player cards.");
 
+                        var channelText = Context.Guild as SocketGuild;
+                        var channelVoice = Context.Guild as SocketGuild;
+                        string changeStringToChannelParams = teamNameWithoutNumber.ToString().Replace(" ", "-").ToLower();
+                        string channelTextId = "";
+                        string channelVoiceId = "";
+                        try
+                        {
+                            channelTextId = channelText.TextChannels.FirstOrDefault(x => x.Name == changeStringToChannelParams).Id.ToString();
+                            channelVoiceId = channelText.VoiceChannels.FirstOrDefault(x => x.Name == teamNameWithoutNumber.ToString()).Id.ToString();
                         }
                         catch
                         {
-                            await ReplyAsync("something went wrong");
+                            await ReplyAsync("Channel id not properly captured.");
                         }
+                        Team migrateTeam = new Team();
+                        migrateTeam.Top = values[0, 1];
+                        migrateTeam.Jg = values[1, 1];
+                        migrateTeam.Mid = values[2, 1];
+                        migrateTeam.Adc = values[3, 1];
+                        migrateTeam.Sup = values[4, 1];
+                        migrateTeam.TeamName = teamNameWithoutNumber.ToString();
+                        migrateTeam.Elo = elo;
+                        migrateTeam.LossesThisSeason = losses;
+                        migrateTeam.TotalLosses = losses;
+                        migrateTeam.TotalWins = wins;
+                        migrateTeam.WinsThisSeason = wins;
+                        migrateTeam.TeamTextChannel = channelTextId;
+                        migrateTeam.TeamVoiceChannel = channelVoiceId;
+                        //runs for the subs
+                        for (int i = 5; i < 10; i++)
+                        {
+                            try
+                            {
+                                if (values[i, 1].ToString() != null)
+                                {
+                                    migrateTeam.Subs.Add(values[i, 1].ToString());
+                                    numCount++;
+                                }
+                            }
+                            catch
+                            {
+                                Console.WriteLine("done with array");
+                            }
+
+                        }
+                        Console.WriteLine(migrateTeam);
+
+                        await mongo.inputTeam(migrateTeam);
+
+                        await ReplyAsync("Team successfully migrated.");
+
                     }
-                    else
+                    catch
                     {
-                        await ReplyAsync("You aren't an admin");
+                        await ReplyAsync("something went wrong");
                     }
-
-
-
+                }
+                else
+                {
+                    await ReplyAsync("You aren't an admin");
                 }
 
 
 
-                [Command("AdminHelp")]
-                public async Task Help()
-                {
+            }
+
+
+
+            [Command("AdminHelp")]
+            public async Task Help()
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
@@ -2230,9 +2237,9 @@ namespace DiscordBotApp.Modules
 
                 EmbedBuilder embedBuilder = new EmbedBuilder();
 
-                    string description = null;
-                    foreach (var cmd in _adminCommands.Modules)
-                    {
+                string description = null;
+                foreach (var cmd in _adminCommands.Modules)
+                {
                     if (cmd.Name == "adminCommands")
                     {
                         foreach (var incmd in cmd.Commands)
@@ -2260,118 +2267,118 @@ namespace DiscordBotApp.Modules
                     }
                 }
 
-                    /* foreach (CommandInfo command in commands)
-                     {
-                         // Get the command Summary attribute information
-                         string embedFieldText = command.Summary ?? "No description available\n";
-                         commandList = commandList + "\n" + command.Name + " " + embedFieldText;
-
-
-                     }
-                     embedBuilder.AddField("list of commands", commandList);*/
-                    await ReplyAsync("", false, embedBuilder.Build());
-                }
-
-                /* [Command("checkValue")]
-                 public async Task checkDeny(IGuildChannel id)
+                /* foreach (CommandInfo command in commands)
                  {
+                     // Get the command Summary attribute information
+                     string embedFieldText = command.Summary ?? "No description available\n";
+                     commandList = commandList + "\n" + command.Name + " " + embedFieldText;
+
+
+                 }
+                 embedBuilder.AddField("list of commands", commandList);*/
+                await ReplyAsync("", false, embedBuilder.Build());
+            }
+
+            /* [Command("checkValue")]
+             public async Task checkDeny(IGuildChannel id)
+             {
 
 
 
-                    // var denyValue = new OverwritePermissions.
+                // var denyValue = new OverwritePermissions.
 
-                     var allowValue = id.AllowValue.ToString();
-
-
-                     await ReplyAsync("this is denyvalue" + denyValue);
-
-                     await ReplyAsync("this is approvevalue" + allowValue);
+                 var allowValue = id.AllowValue.ToString();
 
 
+                 await ReplyAsync("this is denyvalue" + denyValue);
 
-                 }*/
-                private RiotClientSettings GetTournamentSettings()
+                 await ReplyAsync("this is approvevalue" + allowValue);
+
+
+
+             }*/
+            private RiotClientSettings GetTournamentSettings()
+            {
+
+                string riotkey;
+                riotkey = ConfigurationManager.AppSettings.Get("riotkey");
+                return new RiotClientSettings
+
                 {
+                    ApiKey = riotkey,
+                    UseTournamentStub = true
 
-                    string riotkey;
-                    riotkey = ConfigurationManager.AppSettings.Get("riotkey");
-                    return new RiotClientSettings
+                };
 
-                    {
-                        ApiKey = riotkey,
-                        UseTournamentStub = true
-
-                    };
-
-                }
-                [Command("key")]
-                public async Task Key()
-                {
+            }
+            [Command("key")]
+            public async Task Key()
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 IRiotClient client = new RiotClient(GetTournamentSettings());
-                    long tournamentProviderId = await client.CreateTournamentProviderAsync("http://207.148.13.35.vultr.com:80/", PlatformId.NA1, CancellationToken.None);
+                long tournamentProviderId = await client.CreateTournamentProviderAsync("http://207.148.13.35.vultr.com:80/", PlatformId.NA1, CancellationToken.None);
 
-                    Assert.That(tournamentProviderId, Is.GreaterThan(0));
-                    Console.WriteLine(tournamentProviderId);
+                Assert.That(tournamentProviderId, Is.GreaterThan(0));
+                Console.WriteLine(tournamentProviderId);
 
-                    long tournamentId = await client.CreateTournamentAsync(tournamentProviderId, "test", CancellationToken.None);
+                long tournamentId = await client.CreateTournamentAsync(tournamentProviderId, "test", CancellationToken.None);
 
-                    Assert.That(tournamentId, Is.GreaterThan(0));
+                Assert.That(tournamentId, Is.GreaterThan(0));
 
-                    Console.WriteLine(tournamentId);
-                }
-                [Command("validateteam")]
-                [Summary("!validateteam @teamname (adds them ongoing list on googlesheet for ranks)")]
-                public async Task Validate(IRole teamName)
-                {
+                Console.WriteLine(tournamentId);
+            }
+            [Command("validateteam")]
+            [Summary("!validateteam @teamname (adds them ongoing list on googlesheet for ranks)")]
+            public async Task Validate(IRole teamName)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
-                    {
-                        var google = new googleSheet();
-                       await google.TeamName(teamName.ToString());
-                        google.Validate(teamName.ToString());
-                        await ReplyAsync(teamName.ToString() + " added to ranking");
-                    }
-
-                }
-                [Command("sheet")]
-                [Summary("Creates googlesheet for role")]
-                public async Task createSheet(IRole team)
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
                 {
+                    var google = new googleSheet();
+                    await google.TeamName(teamName.ToString());
+                    google.Validate(teamName.ToString());
+                    await ReplyAsync(teamName.ToString() + " added to ranking");
+                }
+
+            }
+            [Command("sheet")]
+            [Summary("Creates googlesheet for role")]
+            public async Task createSheet(IRole team)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
-                    {
-                        var google = new googleSheet();
-                        var run = google.CreateTeam(team.ToString());
-                        await google.TeamName(team.ToString());
-                        await ReplyAsync("Google sheet created.");
-                    }
-
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    var google = new googleSheet();
+                    var run = google.CreateTeam(team.ToString());
+                    await google.TeamName(team.ToString());
+                    await ReplyAsync("Google sheet created.");
                 }
 
-                //updates rank of team every hour
-                [Command("ranklist")]
-                [Summary("updates ranklist in team rankings channel")]
+            }
+
+            //updates rank of team every hour
+            [Command("ranklist")]
+            [Summary("updates ranklist in team rankings channel")]
 
 
-                public async Task updateRanks()
-                {
+            public async Task updateRanks()
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
@@ -2379,27 +2386,27 @@ namespace DiscordBotApp.Modules
                 }
                 int numUp = 0;
 
-                    MongoDB mongo = new MongoDB();
+                MongoDB mongo = new MongoDB();
 
-                    List<string> ranks = await mongo.GetRanks();
-
-                    
-                    var channel = Context.Guild;
-
-                    var embedBuilder = new EmbedBuilder();
-                    var messageSender = channel.GetTextChannel(798058859536056391);
+                List<string> ranks = await mongo.GetRanks();
 
 
-                    try
-                    {
-                        var messages = await channel.GetTextChannel(798058859536056391).GetMessagesAsync(ranks.Count() + 1).FlattenAsync();
-                        var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
-                        await (messageSender as ITextChannel).DeleteMessagesAsync(filteredMessages);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("nothing to delete");
-                    }
+                var channel = Context.Guild;
+
+                var embedBuilder = new EmbedBuilder();
+                var messageSender = channel.GetTextChannel(798058859536056391);
+
+
+                try
+                {
+                    var messages = await channel.GetTextChannel(798058859536056391).GetMessagesAsync(ranks.Count() + 1).FlattenAsync();
+                    var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+                    await (messageSender as ITextChannel).DeleteMessagesAsync(filteredMessages);
+                }
+                catch
+                {
+                    Console.WriteLine("nothing to delete");
+                }
 
 
                 /*  
@@ -2457,25 +2464,25 @@ namespace DiscordBotApp.Modules
                             .WithIsInline(true);*/
                     var embed = new EmbedBuilder()
                             .AddField(exampleField)
-                           // .AddField(otherField)
+                            // .AddField(otherField)
                             .WithAuthor(exampleAuthor)
                             .WithFooter(exampleFooter);
 
                     await messageSender.SendMessageAsync("", false, embed.Build());
                     numUp++;
                 }
-                    //it (messages as SocketUserMessage).ModifyAsync(x => { x.Content = ranks.ToString(); x.Embed = embedBuilder.Build(); });
+                //it (messages as SocketUserMessage).ModifyAsync(x => { x.Content = ranks.ToString(); x.Embed = embedBuilder.Build(); });
 
 
 
 
-                }
-                [Command("purge")]
-                [Alias("clean")]
-                [Summary("Downloads and removes X messages from the current channel.")]
-                
-                public async Task PurgeAsync(int amount)
-                {
+            }
+            [Command("purge")]
+            [Alias("clean")]
+            [Summary("Downloads and removes X messages from the current channel.")]
+
+            public async Task PurgeAsync(int amount)
+            {
 
                 if (work == false)
                 {
@@ -2483,123 +2490,73 @@ namespace DiscordBotApp.Modules
                     return;
                 }
                 var channel = Context.Guild as SocketGuild;
-                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the clean command");
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the clean command");
 
-                    var admin = Context.User as SocketGuildUser;
+                var admin = Context.User as SocketGuildUser;
 
 
 
-                    var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    var currentChannel = Context.Channel.Id;
-                    ulong botChannel = 774501395566297138;
-                    ulong adminBotChannel = 757377449016295527;
+                var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                var currentChannel = Context.Channel.Id;
+                ulong botChannel = 774501395566297138;
+                ulong adminBotChannel = 757377449016295527;
 
-                    if (currentChannel == botChannel || currentChannel == adminBotChannel)
+                if (currentChannel == botChannel || currentChannel == adminBotChannel)
+                {
+                    if (admin.Roles.Contains(rolePermissionAdmin))
                     {
-                        if (admin.Roles.Contains(rolePermissionAdmin))
+                        // Check if the amount provided by the user is positive.
+                        if (amount <= 0)
                         {
-                            // Check if the amount provided by the user is positive.
-                            if (amount <= 0)
-                            {
-                                await ReplyAsync("The amount of messages to remove must be positive.");
-                                return;
-                            }
-
-                            // Download X messages starting from Context.Message, which means
-                            // that it won't delete the message used to invoke this command.
-                            var messages = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, amount).FlattenAsync();
-
-                            // Note:
-                            // FlattenAsync() might show up as a compiler error, because it's
-                            // named differently on stable and nightly versions of Discord.Net.
-                            // - Discord.Net 1.x: Flatten()
-                            // - Discord.Net 2.x: FlattenAsync()
-
-                            // Ensure that the messages aren't older than 14 days,
-                            // because trying to bulk delete messages older than that
-                            // will result in a bad request.
-                            var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
-
-                            // Get the total amount of messages.
-                            var count = filteredMessages.Count();
-
-                            // Check if there are any messages to delete.
-                            if (count == 0)
-                                await ReplyAsync("Nothing to delete.");
-
-                            else
-                            {
-                                // The cast here isn't needed if you're using Discord.Net 1.x,
-                                // but I'd recommend leaving it as it's what's required on 2.x, so
-                                // if you decide to update you won't have to change this line.
-                                await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
-                                await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
-                            }
+                            await ReplyAsync("The amount of messages to remove must be positive.");
+                            return;
                         }
+
+                        // Download X messages starting from Context.Message, which means
+                        // that it won't delete the message used to invoke this command.
+                        var messages = await Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, amount).FlattenAsync();
+
+                        // Note:
+                        // FlattenAsync() might show up as a compiler error, because it's
+                        // named differently on stable and nightly versions of Discord.Net.
+                        // - Discord.Net 1.x: Flatten()
+                        // - Discord.Net 2.x: FlattenAsync()
+
+                        // Ensure that the messages aren't older than 14 days,
+                        // because trying to bulk delete messages older than that
+                        // will result in a bad request.
+                        var filteredMessages = messages.Where(x => (DateTimeOffset.UtcNow - x.Timestamp).TotalDays <= 14);
+
+                        // Get the total amount of messages.
+                        var count = filteredMessages.Count();
+
+                        // Check if there are any messages to delete.
+                        if (count == 0)
+                            await ReplyAsync("Nothing to delete.");
+
                         else
                         {
-                            await ReplyAndDeleteAsync("You are not an admin");
+                            // The cast here isn't needed if you're using Discord.Net 1.x,
+                            // but I'd recommend leaving it as it's what's required on 2.x, so
+                            // if you decide to update you won't have to change this line.
+                            await (Context.Channel as ITextChannel).DeleteMessagesAsync(filteredMessages);
+                            await ReplyAndDeleteAsync($"Removed {count} {(count > 1 ? "messages" : "message")}.");
                         }
                     }
                     else
                     {
-                        await ReplyAndDeleteAsync("This is not admin bot commands or bot commands channel");
+                        await ReplyAndDeleteAsync("You are not an admin");
                     }
                 }
-                [Command("msg")]
-                [Summary("!msg @role messagecontents (lets you message that role. Only use on roles with not a lot of people)")]
-                public async Task Msg(IRole role, [Remainder] string message)
+                else
                 {
-            if (work == false)
-            {
-                await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
-                return;
+                    await ReplyAndDeleteAsync("This is not admin bot commands or bot commands channel");
+                }
             }
-            //logging purposes
-            var channel = Context.Guild as SocketGuild;
-                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
-
-                    var admin = Context.User as SocketGuildUser;
-                    var roleName = role.ToString();
-                    Console.WriteLine(roleName);
-                    //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
-                    var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
-
-
-                    Console.WriteLine("list of users " + listOfUsers);
-
-                    var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (admin.Roles.Contains(rolePermissionAdmin))
-                    {
-                        Console.Write("is admin");
-
-                        foreach (var user in listOfUsers)
-                        {
-
-                            await Task.Delay(3000);
-                            Console.WriteLine("in for each" + user);
-                            try
-                            {
-                                var channelb = await user.GetOrCreateDMChannelAsync();
-
-                                await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
-
-                            }
-
-                            catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
-                            {
-                                Console.WriteLine($"Boo, I cannot message {user}.");
-                                await ReplyAsync($"I cannot message {user}");
-                                continue;
-                            }
-                        }
-                    }
-                }
-
-                [Command("msguser")]
-                [Summary("!msguser @user (Lets you msg user)")]
-                public async Task MsgUser(IUser user, [Remainder] string message)
-                {
+            [Command("msg")]
+            [Summary("!msg @role messagecontents (lets you message that role. Only use on roles with not a lot of people)")]
+            public async Task Msg(IRole role, [Remainder] string message)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
@@ -2607,397 +2564,317 @@ namespace DiscordBotApp.Modules
                 }
                 //logging purposes
                 var channel = Context.Guild as SocketGuild;
-                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command to " + user);
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command for " + role);
 
-                    var admin = Context.User as SocketGuildUser;
+                var admin = Context.User as SocketGuildUser;
+                var roleName = role.ToString();
+                Console.WriteLine(roleName);
+                //var listOfUsers = (role as IChannel).GetUsersAsync(default, default);
+                var listOfUsers = Context.Guild.Roles.FirstOrDefault(x => x.Name == roleName).Members;
 
-                    Console.Write("before checking admin");
 
+                Console.WriteLine("list of users " + listOfUsers);
 
-                    var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (admin.Roles.Contains(rolePermissionAdmin))
+                var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (admin.Roles.Contains(rolePermissionAdmin))
+                {
+                    Console.Write("is admin");
+
+                    foreach (var user in listOfUsers)
                     {
-                        Console.Write("is admin");
 
-
+                        await Task.Delay(3000);
+                        Console.WriteLine("in for each" + user);
                         try
                         {
                             var channelb = await user.GetOrCreateDMChannelAsync();
 
                             await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
-                            await Task.Delay(3000);
+
                         }
 
                         catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
                         {
                             Console.WriteLine($"Boo, I cannot message {user}.");
                             await ReplyAsync($"I cannot message {user}");
-
+                            continue;
                         }
-
-
                     }
                 }
-                [Command("result", RunMode = RunMode.Async)]
-                [Summary("!result @winningteam @losingteam 2-0 pic pic pic (lets you input results)")]
-                public async Task Result(IRole team, IRole opponentTeam, string result, params string[] links)
+            }
+
+            [Command("msguser")]
+            [Summary("!msguser @user (Lets you msg user)")]
+            public async Task MsgUser(IUser user, [Remainder] string message)
+            {
+                if (work == false)
                 {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                //logging purposes
+                var channel = Context.Guild as SocketGuild;
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the msg command to " + user);
+
+                var admin = Context.User as SocketGuildUser;
+
+                Console.Write("before checking admin");
+
+
+                var rolePermissionAdmin = (admin as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (admin.Roles.Contains(rolePermissionAdmin))
+                {
+                    Console.Write("is admin");
+
+
+                    try
+                    {
+                        var channelb = await user.GetOrCreateDMChannelAsync();
+
+                        await channelb.SendMessageAsync($"Hello, {user.Username}! " + message);
+                        await Task.Delay(3000);
+                    }
+
+                    catch (Discord.Net.HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                    {
+                        Console.WriteLine($"Boo, I cannot message {user}.");
+                        await ReplyAsync($"I cannot message {user}");
+
+                    }
+
+
+                }
+            }
+            [Command("result", RunMode = RunMode.Async)]
+            [Summary("!result @winningteam @losingteam 2-0 pic pic pic (lets you input results)")]
+            public async Task Result(IRole team, IRole opponentTeam, string result, params string[] links)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 MongoDB mongo = new MongoDB();
-                    Team mongoTeam = new Team();
-                    Matches mongoMatch = new Matches();
+                Team mongoTeam = new Team();
+                Matches mongoMatch = new Matches();
 
 
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
 
-                    string[] linksFull = new string[3];
-                    linksFull[0] = links[0];
-                    linksFull[1] = links[1];
+                string[] linksFull = new string[3];
+                linksFull[0] = links[0];
+                linksFull[1] = links[1];
 
-                    var channel = Context.Guild as SocketGuild;
-                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used result command ");
+                var channel = Context.Guild as SocketGuild;
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used result command ");
 
-                    await ReplyAsync("Just to verify " + team + " beat " + opponentTeam + " by " + result + "? Please reply with 'yes' or 'no'");
-                    var response = await NextMessageAsync();
-                    Console.WriteLine(response);
-                    if (response.ToString().ToLower() == "yes")
-                    {
-                        Console.WriteLine("yes if");
-                    }
-                    else
-                    {
-                        Console.WriteLine("no if");
-                        return;
-                    }
-
-                    //add blank string if less than 3 links
-                    if (links.Length < 3)
-                    {
-                        linksFull[2] = "";
-                    }
-                    else
-                    {
-                        linksFull[2] = links[2];
-                    }
-                    if (user.Roles.Contains(rolePermissionAdmin))
-                    {
-                        //these are ran opposite for both teams, i.e. times to run win is added to loss for second team and times to run lose is added to the second team's win.
-                        int timesToRunWin = 0;
-                        int timesToRunLose = 0;
-                        var google = new googleSheet();
-                        double[] teams = google.GetElo(team.ToString(), opponentTeam.ToString());
-                        Console.WriteLine(teams);
-                        switch (result)
-                        {
-                            case "2-0":
-                                timesToRunWin = 2;
-
-                                break;
-                            case "2-1":
-                                timesToRunWin = 2;
-                                timesToRunLose = 1;
-                                break;
-                            case "1-2":
-                                timesToRunWin = 1;
-                                timesToRunLose = 2;
-                                break;
-                            case "0-2":
-                                timesToRunLose = 2;
-                                break;
-                            default:
-                                await ReplyAsync("Incorrect format or amount of games, can be 2-1, 2-0, 1-2, 0-2");
-                                return;
-
-                        }
-
-
-                        if (teams != null)
-                        {
-                            Console.WriteLine("Made it into teams not null");
-                            double firstElo = teams[0];
-                            double secondElo = teams[1];
-
-
-
-
-                            double transformedFirstElo = Math.Pow(10, (firstElo / 400));
-                            double transformedSecondElo = Math.Pow(10, (secondElo / 400));
-
-                            double formulaFirstElo = transformedFirstElo / (transformedFirstElo + transformedSecondElo);
-                            double formulaSecondElo = transformedSecondElo / (transformedFirstElo + transformedSecondElo);
-
-
-                            int howBigOfEloSwing = 40;
-
-
-
-
-                            double firstEloCalculatedIfWin = firstElo + howBigOfEloSwing * (1 - formulaFirstElo);
-                            double firstEloCalculatedIfLose = firstElo + howBigOfEloSwing * (0 - formulaFirstElo);
-                            double secondEloCalculatedIfWin = secondElo + howBigOfEloSwing * (1 - formulaSecondElo);
-                            double secondEloCalculatedIfLose = secondElo + howBigOfEloSwing * (0 - formulaSecondElo);
-
-                            //get information of elo going up and down for both teams
-                            firstEloCalculatedIfWin = Math.Round(firstEloCalculatedIfWin - firstElo, 1);
-                            firstEloCalculatedIfLose = Math.Round(firstEloCalculatedIfLose - firstElo, 1);
-                            secondEloCalculatedIfWin = Math.Round(secondEloCalculatedIfWin - secondElo, 1);
-                            secondEloCalculatedIfLose = Math.Round(secondEloCalculatedIfLose - secondElo, 1);
-                            //calculatefinished match for first called team
-                            double finishedEloFirstTeam = Math.Round((firstElo + firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose), 1);
-                            //calculatedfinished match for second called team
-                            double finishedEloSecondTeam = Math.Round((secondElo + secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin), 1);
-
-                            double firstTeamChanged = Math.Round((firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose), 1);
-                            double secondTeamChanged = Math.Round((secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin), 1);
-
-
-
-                            var resultOfFirstTeam = timesToRunWin + "-" + timesToRunLose;
-                            var resultOfSecondTeam = timesToRunLose + "-" + timesToRunWin;
-
-
-                            Console.WriteLine("Run win command " + timesToRunWin + " and run lose command " + timesToRunLose);
-
-                            int positionOfYourTeam = 0;
-                            int positionOfOpposingTeam = 0;
-                            int howManyInListYourTeam = 0;
-                            int howManyInListOpposingTeam = 0;
-                            Console.Write("is admin");
-                            try
-                            {
-                                string locationOfInput = "confirmedmatch";
-                                //makes sure that there is a pending scheduled match
-                                string[] confirmYourTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, false);
-                                string[] confirmOpposingTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, true);
-                                if (confirmYourTeamChallenge[0] == opponentTeam.ToString())
-                                {
-                                    Console.WriteLine("opposing team and confirm[0] are the same");
-                                    positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
-                                    positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
-                                    howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
-                                    howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
-                                }
-                                string convertedDate = google.GetMatchDate(team.ToString(), true, positionOfYourTeam).ToString();
-
-
-
-                                //for first team
-
-                                google.MatchResult(team.ToString(), opponentTeam.ToString(), resultOfFirstTeam.ToString(), convertedDate.ToString(), linksFull, firstTeamChanged);
-                                google.InputElo(team.ToString(), finishedEloFirstTeam);
-                                //for second team
-                                google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), linksFull, secondTeamChanged);
-                                google.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
-
-                                //adding match details
-                                await mongo.InputElo(team.ToString(), finishedEloFirstTeam);
-                                await mongo.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
-
-
-                                await mongo.AddResults(team.ToString(), timesToRunWin, timesToRunLose);
-                                await mongo.AddResults(opponentTeam.ToString(), timesToRunLose, timesToRunWin);
-
-                                await mongo.changeMatchToResult(team.ToString(), opponentTeam.ToString());
-
-                                google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
-                                await ReplyAsync(team.ToString() + " elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
-                            }
-                            catch
-                            {
-                                await ReplyAsync("Something went wrong, please contact the admins");
-                            }
-                        }
-
-                    }
-                    else
-                    {
-                        await ReplyAsync("You are not an admin.");
-                    }
+                await ReplyAsync("Just to verify " + team + " beat " + opponentTeam + " by " + result + "? Please reply with 'yes' or 'no'");
+                var response = await NextMessageAsync();
+                Console.WriteLine(response);
+                if (response.ToString().ToLower() == "yes")
+                {
+                    Console.WriteLine("yes if");
+                }
+                else
+                {
+                    Console.WriteLine("no if");
+                    return;
                 }
 
-
-
-                [Command("createteam", RunMode = RunMode.Async)]
-                //can be used by admin/owner to create new team on google sheet api
-                [Summary
-              ("!createteam @teamcaptain teamname (creates a team)")]
-                public async Task CreateTeam(IGuildUser calledUser, [Remainder] string teamNameBeingCreated)
+                //add blank string if less than 3 links
+                if (links.Length < 3)
                 {
+                    linksFull[2] = "";
+                }
+                else
+                {
+                    linksFull[2] = links[2];
+                }
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    //these are ran opposite for both teams, i.e. times to run win is added to loss for second team and times to run lose is added to the second team's win.
+                    int timesToRunWin = 0;
+                    int timesToRunLose = 0;
+                    var google = new googleSheet();
+                    double[] teams = google.GetElo(team.ToString(), opponentTeam.ToString());
+                    Console.WriteLine(teams);
+                    switch (result)
+                    {
+                        case "2-0":
+                            timesToRunWin = 2;
+
+                            break;
+                        case "2-1":
+                            timesToRunWin = 2;
+                            timesToRunLose = 1;
+                            break;
+                        case "1-2":
+                            timesToRunWin = 1;
+                            timesToRunLose = 2;
+                            break;
+                        case "0-2":
+                            timesToRunLose = 2;
+                            break;
+                        default:
+                            await ReplyAsync("Incorrect format or amount of games, can be 2-1, 2-0, 1-2, 0-2");
+                            return;
+
+                    }
+
+
+                    if (teams != null)
+                    {
+                        Console.WriteLine("Made it into teams not null");
+                        double firstElo = teams[0];
+                        double secondElo = teams[1];
+
+
+
+
+                        double transformedFirstElo = Math.Pow(10, (firstElo / 400));
+                        double transformedSecondElo = Math.Pow(10, (secondElo / 400));
+
+                        double formulaFirstElo = transformedFirstElo / (transformedFirstElo + transformedSecondElo);
+                        double formulaSecondElo = transformedSecondElo / (transformedFirstElo + transformedSecondElo);
+
+
+                        int howBigOfEloSwing = 40;
+
+
+
+
+                        double firstEloCalculatedIfWin = firstElo + howBigOfEloSwing * (1 - formulaFirstElo);
+                        double firstEloCalculatedIfLose = firstElo + howBigOfEloSwing * (0 - formulaFirstElo);
+                        double secondEloCalculatedIfWin = secondElo + howBigOfEloSwing * (1 - formulaSecondElo);
+                        double secondEloCalculatedIfLose = secondElo + howBigOfEloSwing * (0 - formulaSecondElo);
+
+                        //get information of elo going up and down for both teams
+                        firstEloCalculatedIfWin = Math.Round(firstEloCalculatedIfWin - firstElo, 1);
+                        firstEloCalculatedIfLose = Math.Round(firstEloCalculatedIfLose - firstElo, 1);
+                        secondEloCalculatedIfWin = Math.Round(secondEloCalculatedIfWin - secondElo, 1);
+                        secondEloCalculatedIfLose = Math.Round(secondEloCalculatedIfLose - secondElo, 1);
+                        //calculatefinished match for first called team
+                        double finishedEloFirstTeam = Math.Round((firstElo + firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose), 1);
+                        //calculatedfinished match for second called team
+                        double finishedEloSecondTeam = Math.Round((secondElo + secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin), 1);
+
+                        double firstTeamChanged = Math.Round((firstEloCalculatedIfWin * timesToRunWin + firstEloCalculatedIfLose * timesToRunLose), 1);
+                        double secondTeamChanged = Math.Round((secondEloCalculatedIfWin * timesToRunLose + secondEloCalculatedIfLose * timesToRunWin), 1);
+
+
+
+                        var resultOfFirstTeam = timesToRunWin + "-" + timesToRunLose;
+                        var resultOfSecondTeam = timesToRunLose + "-" + timesToRunWin;
+
+
+                        Console.WriteLine("Run win command " + timesToRunWin + " and run lose command " + timesToRunLose);
+
+                        int positionOfYourTeam = 0;
+                        int positionOfOpposingTeam = 0;
+                        int howManyInListYourTeam = 0;
+                        int howManyInListOpposingTeam = 0;
+                        Console.Write("is admin");
+                        try
+                        {
+                            string locationOfInput = "confirmedmatch";
+                            //makes sure that there is a pending scheduled match
+                            string[] confirmYourTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, false);
+                            string[] confirmOpposingTeamChallenge = google.Confirm(team.ToString(), opponentTeam.ToString(), locationOfInput, true);
+                            if (confirmYourTeamChallenge[0] == opponentTeam.ToString())
+                            {
+                                Console.WriteLine("opposing team and confirm[0] are the same");
+                                positionOfYourTeam = Int32.Parse(confirmYourTeamChallenge[1]);
+                                positionOfOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[1]);
+                                howManyInListYourTeam = Int32.Parse(confirmYourTeamChallenge[2]);
+                                howManyInListOpposingTeam = Int32.Parse(confirmOpposingTeamChallenge[2]);
+                            }
+                            string convertedDate = google.GetMatchDate(team.ToString(), true, positionOfYourTeam).ToString();
+
+
+
+                            //for first team
+
+                            google.MatchResult(team.ToString(), opponentTeam.ToString(), resultOfFirstTeam.ToString(), convertedDate.ToString(), linksFull, firstTeamChanged);
+                            google.InputElo(team.ToString(), finishedEloFirstTeam);
+                            //for second team
+                            google.MatchResult(opponentTeam.ToString(), team.ToString(), resultOfSecondTeam.ToString(), convertedDate.ToString(), linksFull, secondTeamChanged);
+                            google.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
+
+                            //adding match details
+                            await mongo.InputElo(team.ToString(), finishedEloFirstTeam);
+                            await mongo.InputElo(opponentTeam.ToString(), finishedEloSecondTeam);
+
+
+                            await mongo.AddResults(team.ToString(), timesToRunWin, timesToRunLose);
+                            await mongo.AddResults(opponentTeam.ToString(), timesToRunLose, timesToRunWin);
+
+                            await mongo.changeMatchToResult(team.ToString(), opponentTeam.ToString());
+
+                            google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
+                            await ReplyAsync(team.ToString() + " elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
+                        }
+                        catch
+                        {
+                            await ReplyAsync("Something went wrong, please contact the admins");
+                        }
+                    }
+
+                }
+                else
+                {
+                    await ReplyAsync("You are not an admin.");
+                }
+            }
+
+
+
+            [Command("createteam", RunMode = RunMode.Async)]
+            //can be used by admin/owner to create new team on google sheet api
+            [Summary
+          ("!createteam @teamcaptain teamname (creates a team)")]
+            public async Task CreateTeam(IGuildUser calledUser, [Remainder] string teamNameBeingCreated)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var channel = Context.Guild as SocketGuild;
-                    var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the createteam command for " + teamNameBeingCreated);
+                var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the createteam command for " + teamNameBeingCreated);
 
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+
+                    var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
+
+                    //captainroleid
+                    // style server 609893180019834880
+                    //copy of style server 705651654082560003
+                    ulong roleId = 609893180019834880;
+                    var captainRole = Context.Guild.GetRole(roleId);
+                    //botid
+
+
+                    //checks if role admin or owner
+                    if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
                     {
-
-                        var rolePermissionOwner = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Owner");
-
-                        //captainroleid
-                        // style server 609893180019834880
-                        //copy of style server 705651654082560003
-                        ulong roleId = 609893180019834880;
-                        var captainRole = Context.Guild.GetRole(roleId);
-                        //botid
-
-
-                        //checks if role admin or owner
-                        if ((user.Roles.Contains(rolePermissionAdmin)) || (user.Roles.Contains(rolePermissionOwner)))
+                        try
                         {
-                            try
+                            await ReplyAsync(" Is this an org? Enter yes or no.");
+                            var askIfOrg = await NextMessageAsync();
+                            if (askIfOrg != null)
                             {
-                                await ReplyAsync(" Is this an org? Enter yes or no.");
-                                var askIfOrg = await NextMessageAsync();
-                                if (askIfOrg != null)
+
+                                if (askIfOrg.ToString().ToLower() == "yes" || askIfOrg.ToString().ToLower() == "no")
                                 {
-
-                                    if (askIfOrg.ToString().ToLower() == "yes" || askIfOrg.ToString().ToLower() == "no")
+                                    if (askIfOrg.ToString().ToLower() == "yes")
                                     {
-                                        if (askIfOrg.ToString().ToLower() == "yes")
-                                        {
-                                            await ReplyAsync("Okay, what is the orgs name?");
-                                            var nameOfOrg = await NextMessageAsync();
-                                            if (nameOfOrg != null)
-                                            {
-                                                await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
-                                                var response = await NextMessageAsync();
-                                                if (response != null)
-                                                {
-                                                    if (response.ToString().ToLower() == "yes" || response.ToString().ToLower() == "no")
-                                                    {
-                                                        await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
-
-                                                        var permissions = new GuildPermissions(104324673);
-
-                                                        var addPermissions = new OverwritePermissions(70770240, 0);
-                                                        //org category id
-                                                        ulong assignChannelIdOrgText = 774102389341814794;
-
-                                                        //full channel team text
-                                                        // ulong assignChannelIdTeamText = 622919737365495849;
-                                                        //old id 774104289919500298
-
-                                                        ulong assignChannelIdTeamText = 776610278204506162;
-
-
-                                                        //full voice channel
-                                                        //ulong assignChannelIdTeamVoice = 622919840444841984;
-
-                                                        //old id 774104754938052609
-                                                        ulong assignChannelIdTeamVoice = 776611013751078954;
-
-                                                        //create new channels and assign them under categories
-                                                        Console.Write("before channel create");
-                                                        var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
-                                                        Console.WriteLine("between text and voice");
-                                                        var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
-                                                        Console.WriteLine("before role create");
-                                                        var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
-
-                                                        //var everyoneRole = Context.Guild.GetRole(705651653323522121);
-                                                        //var everyoneRestRole = everyoneRole as RestRole;
-                                                        Console.WriteLine("before addpermissions text");
-
-
-                                                        //everyone role
-                                                        var everyone = Context.Guild.GetRole(601677722577797120);
-
-                                                        await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                                                        // await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
-                                                        Console.WriteLine("before addpermissions voice");
-                                                        await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                                                        // await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
-                                                        Console.WriteLine("before apply permissions to everyone");
-
-
-                                                        //asks if org and creates seperate text channel
-
-
-
-                                                        if (askIfOrg.ToString().ToLower() == "yes")
-                                                        {
-
-                                                            var createOrgTextChannel = await Context.Guild.CreateTextChannelAsync(nameOfOrg.ToString(), channel => channel.CategoryId = assignChannelIdOrgText, default);
-                                                            await createOrgTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
-                                                        }
-                                                        else if (askIfOrg.ToString().ToLower() == "no")
-                                                        {
-                                                            await ReplyAsync("Okay, this is not an org.");
-                                                        }
-
-
-
-
-
-
-                                                        await calledUser.AddRoleAsync(createdRole);
-                                                        await calledUser.AddRoleAsync(captainRole);
-                                                        Console.WriteLine("after addpermissions");
-
-
-
-                                                        if (response.ToString().ToLower() == "yes")
-                                                        {
-                                                            List<string> captain = new List<string>();
-                                                            captain.Add(calledUser.ToString());
-                                                            var google = new googleSheet();
-                                                            var run = google.CreateTeam(teamNameBeingCreated);
-                                                            //creates team in database as well
-                                                            MongoDB mongo = new MongoDB();
-                                                            Team team = new Team();
-                                                            team.TeamName = teamNameBeingCreated;
-                                                            team.TeamTextChannel = createTextChannel.Id.ToString();
-                                                            team.TeamVoiceChannel = createVoiceChannel.Id.ToString();
-                                                            team.Captain = captain;
-
-                                                            await mongo.inputTeam(team);
-
-                                                            await ReplyAsync("Google sheet created and team inserted into database.");
-
-                                                            var adminHelpChannel = channel.GetTextChannel(777718412470255626);
-                                                            await createTextChannel.SendMessageAsync("Hello " + calledUser.Mention + " this is your new text channel for your team " + createdRole.Mention + ". \n To start adding players to your team, use the !add " +
-                                                                createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
-
-                                                        }
-                                                        else if (response.ToString().ToLower() == "no")
-                                                        {
-                                                            await ReplyAsync("No google sheet created.");
-                                                        }
-
-                                                        //   var google = new googleSheet();
-                                                        // IList<IList<Object>> values = google.Google();
-                                                    }
-                                                    else
-                                                    {
-                                                        await ReplyAsync("Please respond with yes or no, retry command"); return;
-                                                    }
-
-                                                }
-                                                else
-                                                {
-                                                    await ReplyAsync("Please respond with yes or no in 10 seconds, retry command");
-                                                    return;
-
-
-                                                }
-                                            }
-
-                                            else
-                                            {
-                                                await ReplyAsync("Please name the org, retry command"); return;
-                                            }
-                                        }
-                                        else
+                                        await ReplyAsync("Okay, what is the orgs name?");
+                                        var nameOfOrg = await NextMessageAsync();
+                                        if (nameOfOrg != null)
                                         {
                                             await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
                                             var response = await NextMessageAsync();
@@ -3010,7 +2887,8 @@ namespace DiscordBotApp.Modules
                                                     var permissions = new GuildPermissions(104324673);
 
                                                     var addPermissions = new OverwritePermissions(70770240, 0);
-
+                                                    //org category id
+                                                    ulong assignChannelIdOrgText = 774102389341814794;
 
                                                     //full channel team text
                                                     // ulong assignChannelIdTeamText = 622919737365495849;
@@ -3026,10 +2904,13 @@ namespace DiscordBotApp.Modules
                                                     ulong assignChannelIdTeamVoice = 776611013751078954;
 
                                                     //create new channels and assign them under categories
+                                                    Console.Write("before channel create");
                                                     var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                                                    Console.WriteLine("between text and voice");
                                                     var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
-
+                                                    Console.WriteLine("before role create");
                                                     var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
+
                                                     //var everyoneRole = Context.Guild.GetRole(705651653323522121);
                                                     //var everyoneRestRole = everyoneRole as RestRole;
                                                     Console.WriteLine("before addpermissions text");
@@ -3046,10 +2927,20 @@ namespace DiscordBotApp.Modules
                                                     Console.WriteLine("before apply permissions to everyone");
 
 
+                                                    //asks if org and creates seperate text channel
 
-                                                    //need this outside of method for some reason
 
 
+                                                    if (askIfOrg.ToString().ToLower() == "yes")
+                                                    {
+
+                                                        var createOrgTextChannel = await Context.Guild.CreateTextChannelAsync(nameOfOrg.ToString(), channel => channel.CategoryId = assignChannelIdOrgText, default);
+                                                        await createOrgTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                    }
+                                                    else if (askIfOrg.ToString().ToLower() == "no")
+                                                    {
+                                                        await ReplyAsync("Okay, this is not an org.");
+                                                    }
 
 
 
@@ -3076,13 +2967,14 @@ namespace DiscordBotApp.Modules
                                                         team.TeamVoiceChannel = createVoiceChannel.Id.ToString();
                                                         team.Captain = captain;
 
-
                                                         await mongo.inputTeam(team);
+
                                                         await ReplyAsync("Google sheet created and team inserted into database.");
 
                                                         var adminHelpChannel = channel.GetTextChannel(777718412470255626);
                                                         await createTextChannel.SendMessageAsync("Hello " + calledUser.Mention + " this is your new text channel for your team " + createdRole.Mention + ". \n To start adding players to your team, use the !add " +
-                                                                createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
+                                                            createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
+
                                                     }
                                                     else if (response.ToString().ToLower() == "no")
                                                     {
@@ -3106,46 +2998,161 @@ namespace DiscordBotApp.Modules
 
                                             }
                                         }
+
+                                        else
+                                        {
+                                            await ReplyAsync("Please name the org, retry command"); return;
+                                        }
                                     }
                                     else
                                     {
-                                        await ReplyAsync("Please respond within 10 seconds, retry command"); return;
-                                    }
+                                        await ReplyAsync("Do you want to create a googlesheet for this team? Enter yes or no.");
+                                        var response = await NextMessageAsync();
+                                        if (response != null)
+                                        {
+                                            if (response.ToString().ToLower() == "yes" || response.ToString().ToLower() == "no")
+                                            {
+                                                await ReplyAsync($"Team {teamNameBeingCreated} created, added {teamNameBeingCreated} and Team Captain role to {calledUser}");
 
+                                                var permissions = new GuildPermissions(104324673);
+
+                                                var addPermissions = new OverwritePermissions(70770240, 0);
+
+
+                                                //full channel team text
+                                                // ulong assignChannelIdTeamText = 622919737365495849;
+                                                //old id 774104289919500298
+
+                                                ulong assignChannelIdTeamText = 776610278204506162;
+
+
+                                                //full voice channel
+                                                //ulong assignChannelIdTeamVoice = 622919840444841984;
+
+                                                //old id 774104754938052609
+                                                ulong assignChannelIdTeamVoice = 776611013751078954;
+
+                                                //create new channels and assign them under categories
+                                                var createTextChannel = await Context.Guild.CreateTextChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamText, default);
+                                                var createVoiceChannel = await Context.Guild.CreateVoiceChannelAsync(teamNameBeingCreated, channel => channel.CategoryId = assignChannelIdTeamVoice, default);
+
+                                                var createdRole = await Context.Guild.CreateRoleAsync(teamNameBeingCreated, permissions, default, true, true, default);
+                                                //var everyoneRole = Context.Guild.GetRole(705651653323522121);
+                                                //var everyoneRestRole = everyoneRole as RestRole;
+                                                Console.WriteLine("before addpermissions text");
+
+
+                                                //everyone role
+                                                var everyone = Context.Guild.GetRole(601677722577797120);
+
+                                                await createTextChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                // await createTextChannel.AddPermissionOverwriteAsync(everyone, zeroPerms);
+                                                Console.WriteLine("before addpermissions voice");
+                                                await createVoiceChannel.AddPermissionOverwriteAsync(createdRole, addPermissions);
+                                                // await createVoiceChannel.AddPermissionOverwriteAsync(everyone, zeroPermsVoice);
+                                                Console.WriteLine("before apply permissions to everyone");
+
+
+
+                                                //need this outside of method for some reason
+
+
+
+
+
+
+
+
+                                                await calledUser.AddRoleAsync(createdRole);
+                                                await calledUser.AddRoleAsync(captainRole);
+                                                Console.WriteLine("after addpermissions");
+
+
+
+                                                if (response.ToString().ToLower() == "yes")
+                                                {
+                                                    List<string> captain = new List<string>();
+                                                    captain.Add(calledUser.ToString());
+                                                    var google = new googleSheet();
+                                                    var run = google.CreateTeam(teamNameBeingCreated);
+                                                    //creates team in database as well
+                                                    MongoDB mongo = new MongoDB();
+                                                    Team team = new Team();
+                                                    team.TeamName = teamNameBeingCreated;
+                                                    team.TeamTextChannel = createTextChannel.Id.ToString();
+                                                    team.TeamVoiceChannel = createVoiceChannel.Id.ToString();
+                                                    team.Captain = captain;
+
+
+                                                    await mongo.inputTeam(team);
+                                                    await ReplyAsync("Google sheet created and team inserted into database.");
+
+                                                    var adminHelpChannel = channel.GetTextChannel(777718412470255626);
+                                                    await createTextChannel.SendMessageAsync("Hello " + calledUser.Mention + " this is your new text channel for your team " + createdRole.Mention + ". \n To start adding players to your team, use the !add " +
+                                                            createdRole.Mention + " top/jg/mid/adc/sup/sub @userofthat role" + "\n For example !add " + createdRole.Mention + " sub " + calledUser.Mention + ". After you have filled out your team please let an admin know so we can get you added to the ranking, also if you haven't paid please reach out to sky dancer to submit your payment. If you have any questions feel free to message " + adminHelpChannel.Mention);
+                                                }
+                                                else if (response.ToString().ToLower() == "no")
+                                                {
+                                                    await ReplyAsync("No google sheet created.");
+                                                }
+
+                                                //   var google = new googleSheet();
+                                                // IList<IList<Object>> values = google.Google();
+                                            }
+                                            else
+                                            {
+                                                await ReplyAsync("Please respond with yes or no, retry command"); return;
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            await ReplyAsync("Please respond with yes or no in 10 seconds, retry command");
+                                            return;
+
+
+                                        }
+                                    }
                                 }
                                 else
                                 {
                                     await ReplyAsync("Please respond within 10 seconds, retry command"); return;
                                 }
+
                             }
-                            catch
+                            else
                             {
-                                await ReplyAsync("Error, please use format !createteam @teamcaptainofteam nameofteam ");
+                                await ReplyAsync("Please respond within 10 seconds, retry command"); return;
                             }
-
                         }
-                        else
+                        catch
                         {
-                            await ReplyAsync("You are not owner/admin");
+                            await ReplyAsync("Error, please use format !createteam @teamcaptainofteam nameofteam ");
                         }
-
 
                     }
+                    else
+                    {
+                        await ReplyAsync("You are not owner/admin");
+                    }
+
 
                 }
-                [Command("deleteteam", RunMode = RunMode.Async)]
-                [Summary("!deleteteam @teamname (deletes team from google sheet, removes them from ranklist, deletes text and voice channels)")]
-                public async Task DeleteTeam(IRole team)
-                {
+
+            }
+            [Command("deleteteam", RunMode = RunMode.Async)]
+            [Summary("!deleteteam @teamname (deletes team from google sheet, removes them from ranklist, deletes text and voice channels)")]
+            public async Task DeleteTeam(IRole team)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var google = new googleSheet();
-                    var mongo = new mongo();
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                var mongo = new mongo();
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
                 if (user.Roles.Contains(rolePermissionAdmin))
                 {
                     await ReplyAsync("Are you sure you want to delete " + team.Name + "? 'yes' or 'no'");
@@ -3156,7 +3163,8 @@ namespace DiscordBotApp.Modules
                     {
                         if (confirmDelete.ToString().ToLower() == "yes")
                         {
-                            try {
+                            try
+                            {
                                 await google.deleteTeam(team.Name);
 
                                 string[] channelIds = await mongo.getChannelIds(team.Name);
@@ -3164,7 +3172,7 @@ namespace DiscordBotApp.Modules
                                 var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0]));
                                 var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]));
 
-                               await channelText.DeleteAsync();
+                                await channelText.DeleteAsync();
                                 await channelVoice.DeleteAsync();
                                 await team.DeleteAsync();
                                 await ReplyAsync("Deleted team");
@@ -3188,293 +3196,292 @@ namespace DiscordBotApp.Modules
                     await ReplyAndDeleteAsync("You do not have the admin role.");
                     return;
                 }
-                }
+            }
 
-                [Command("elo")]
-                [Summary("!elo @teamname (resets elo and bases it off of top 5 players)")]
-                public async Task CalculateElo(IRole team)
-                {
+            [Command("elo")]
+            [Summary("!elo @teamname (resets elo and bases it off of top 5 players)")]
+            public async Task CalculateElo(IRole team)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var google = new googleSheet();
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    List<int> topfive = new List<int>();
+                    string[] values = google.CalculateElo(team.ToString());
+                    foreach (var row in values)
                     {
-                        List<int> topfive = new List<int>();
-                        string[] values = google.CalculateElo(team.ToString());
-                        foreach (var row in values)
+                        switch (row.ToString())
                         {
-                            switch (row.ToString())
-                            {
-                                case "CHALLENGER I":
-                                    topfive.Add(1);
-                                    break;
-                                case "GRANDMASTER I":
-                                    topfive.Add(2);
-                                    break;
-                                case "MASTER I":
-                                    topfive.Add(3);
-                                    break;
-                                case "DIAMOND I":
-                                    topfive.Add(4);
-                                    break;
-                                case "DIAMOND II":
-                                    topfive.Add(5);
-                                    Console.WriteLine("made it here");
-                                    break;
-                                case "DIAMOND III":
-                                    topfive.Add(6);
-                                    break;
-                                case "DIAMOND IV":
-                                    topfive.Add(7);
-                                    break;
-                                case "PLATINUM I":
-                                    topfive.Add(8);
-                                    break;
-                                case "PLATINUM II":
-                                    topfive.Add(9);
-                                    break;
-                                case "PLATINUM III":
-                                    topfive.Add(10);
-                                    break;
-                                case "PLATINUM IV":
-                                    topfive.Add(11);
-                                    break;
-                                case "GOLD I":
-                                    topfive.Add(12);
-                                    break;
-                                case "GOLD II":
-                                    topfive.Add(13);
-                                    break;
-                                case "GOLD III":
-                                    topfive.Add(14);
-                                    break;
-                                case "GOLD IV":
-                                    topfive.Add(15);
-                                    break;
-                                case "SILVER I":
-                                    topfive.Add(16);
-                                    break;
-                                case "SILVER II":
-                                    topfive.Add(17);
-                                    break;
-                                case "SILVER III":
-                                    topfive.Add(18);
-                                    break;
-                                case "SILVER IV":
-                                    topfive.Add(19);
-                                    break;
-                                case "BRONZE I":
-                                    topfive.Add(20);
-                                    break;
-                                case "BRONZE II":
-                                    topfive.Add(21);
-                                    break;
-                                case "BRONZE III":
-                                    topfive.Add(22);
-                                    break;
-                                case "BRONZE IV":
-                                    topfive.Add(23);
-                                    break;
-                                case "IRON I":
-                                    topfive.Add(24);
-                                    break;
-                                case "IRON II":
-                                    topfive.Add(25);
-                                    break;
-                                case "IRON III":
-                                    topfive.Add(26);
-                                    break;
-                                case "IRON IV":
-                                    topfive.Add(27);
-                                    break;
-                                default:
-                                    Console.WriteLine("Nothing");
-                                    break;
-                            }
+                            case "CHALLENGER I":
+                                topfive.Add(1);
+                                break;
+                            case "GRANDMASTER I":
+                                topfive.Add(2);
+                                break;
+                            case "MASTER I":
+                                topfive.Add(3);
+                                break;
+                            case "DIAMOND I":
+                                topfive.Add(4);
+                                break;
+                            case "DIAMOND II":
+                                topfive.Add(5);
+                                break;
+                            case "DIAMOND III":
+                                topfive.Add(6);
+                                break;
+                            case "DIAMOND IV":
+                                topfive.Add(7);
+                                break;
+                            case "PLATINUM I":
+                                topfive.Add(8);
+                                break;
+                            case "PLATINUM II":
+                                topfive.Add(9);
+                                break;
+                            case "PLATINUM III":
+                                topfive.Add(10);
+                                break;
+                            case "PLATINUM IV":
+                                topfive.Add(11);
+                                break;
+                            case "GOLD I":
+                                topfive.Add(12);
+                                break;
+                            case "GOLD II":
+                                topfive.Add(13);
+                                break;
+                            case "GOLD III":
+                                topfive.Add(14);
+                                break;
+                            case "GOLD IV":
+                                topfive.Add(15);
+                                break;
+                            case "SILVER I":
+                                topfive.Add(16);
+                                break;
+                            case "SILVER II":
+                                topfive.Add(17);
+                                break;
+                            case "SILVER III":
+                                topfive.Add(18);
+                                break;
+                            case "SILVER IV":
+                                topfive.Add(19);
+                                break;
+                            case "BRONZE I":
+                                topfive.Add(20);
+                                break;
+                            case "BRONZE II":
+                                topfive.Add(21);
+                                break;
+                            case "BRONZE III":
+                                topfive.Add(22);
+                                break;
+                            case "BRONZE IV":
+                                topfive.Add(23);
+                                break;
+                            case "IRON I":
+                                topfive.Add(24);
+                                break;
+                            case "IRON II":
+                                topfive.Add(25);
+                                break;
+                            case "IRON III":
+                                topfive.Add(26);
+                                break;
+                            case "IRON IV":
+                                topfive.Add(27);
+                                break;
+                            default:
+                                Console.WriteLine("Nothing");
+                                break;
                         }
-                        Console.WriteLine("made it here" + topfive.ToString());
-                        var sortedList = topfive.OrderBy(x => x).ToList();
-                        Console.WriteLine(sortedList.ToString());
-                        var totalElo = 0;
-                        for (int i = 0; i < 5; i++)
+                    }
+                    Console.WriteLine("made it here" + topfive.ToString());
+                    var sortedList = topfive.OrderBy(x => x).ToList();
+                    Console.WriteLine(sortedList.ToString());
+                    var totalElo = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+
+                        var checkMyElo = sortedList[i];
+                        switch (checkMyElo)
                         {
-
-                            var checkMyElo = sortedList[i];
-                            switch (checkMyElo)
-                            {
-                                case 1:
-                                    totalElo = totalElo + 600;
-                                    break;
-                                case 2:
-                                    totalElo = totalElo + 550;
-                                    break;
-                                case 3:
-                                    totalElo = totalElo + 500;
-                                    break;
-                                case 4:
-                                    totalElo = totalElo + 475;
-                                    break;
-                                case 5:
-                                    totalElo = totalElo + 450;
-                                    Console.WriteLine("made it here");
-                                    break;
-                                case 6:
-                                    totalElo = totalElo + 425;
-                                    break;
-                                case 7:
-                                    totalElo = totalElo + 390;
-                                    break;
-                                case 8:
-                                    totalElo = totalElo + 380;
-                                    break;
-                                case 9:
-                                    totalElo = totalElo + 360;
-                                    break;
-                                case 10:
-                                    totalElo = totalElo + 340;
-                                    break;
-                                case 11:
-                                    totalElo = totalElo + 320;
-                                    break;
-                                case 12:
-                                    totalElo = totalElo + 310;
-                                    break;
-                                case 13:
-                                    totalElo = totalElo + 290;
-                                    break;
-                                case 14:
-                                    totalElo = totalElo + 280;
-                                    break;
-                                case 15:
-                                    totalElo = totalElo + 270;
-                                    break;
-                                case 16:
-                                    totalElo = totalElo + 260;
-                                    break;
-                                case 17:
-                                    totalElo = totalElo + 250;
-                                    break;
-                                case 18:
-                                    totalElo = totalElo + 240;
-                                    break;
-                                case 19:
-                                    totalElo = totalElo + 230;
-                                    break;
-                                case 20:
-                                    totalElo = totalElo + 220;
-                                    break;
-                                case 21:
-                                    totalElo = totalElo + 210;
-                                    break;
-                                case 22:
-                                    totalElo = totalElo + 200;
-                                    break;
-                                case 23:
-                                    totalElo = totalElo + 190;
-                                    break;
-                                case 24:
-                                    totalElo = totalElo + 180;
-                                    break;
-                                case 25:
-                                    totalElo = totalElo + 170;
-                                    break;
-                                case 26:
-                                    totalElo = totalElo + 160;
-                                    break;
-                                case 27:
-                                    totalElo = totalElo + 150;
-                                    break;
-                                default:
-                                    Console.WriteLine("Nothing");
-                                    break;
-                            }
+                            case 1:
+                                totalElo = totalElo + 600;
+                                break;
+                            case 2:
+                                totalElo = totalElo + 550;
+                                break;
+                            case 3:
+                                totalElo = totalElo + 500;
+                                break;
+                            case 4:
+                                totalElo = totalElo + 475;
+                                break;
+                            case 5:
+                                totalElo = totalElo + 450;
+                                Console.WriteLine("made it here");
+                                break;
+                            case 6:
+                                totalElo = totalElo + 425;
+                                break;
+                            case 7:
+                                totalElo = totalElo + 390;
+                                break;
+                            case 8:
+                                totalElo = totalElo + 380;
+                                break;
+                            case 9:
+                                totalElo = totalElo + 360;
+                                break;
+                            case 10:
+                                totalElo = totalElo + 340;
+                                break;
+                            case 11:
+                                totalElo = totalElo + 320;
+                                break;
+                            case 12:
+                                totalElo = totalElo + 310;
+                                break;
+                            case 13:
+                                totalElo = totalElo + 290;
+                                break;
+                            case 14:
+                                totalElo = totalElo + 280;
+                                break;
+                            case 15:
+                                totalElo = totalElo + 270;
+                                break;
+                            case 16:
+                                totalElo = totalElo + 260;
+                                break;
+                            case 17:
+                                totalElo = totalElo + 250;
+                                break;
+                            case 18:
+                                totalElo = totalElo + 240;
+                                break;
+                            case 19:
+                                totalElo = totalElo + 230;
+                                break;
+                            case 20:
+                                totalElo = totalElo + 220;
+                                break;
+                            case 21:
+                                totalElo = totalElo + 210;
+                                break;
+                            case 22:
+                                totalElo = totalElo + 200;
+                                break;
+                            case 23:
+                                totalElo = totalElo + 190;
+                                break;
+                            case 24:
+                                totalElo = totalElo + 180;
+                                break;
+                            case 25:
+                                totalElo = totalElo + 170;
+                                break;
+                            case 26:
+                                totalElo = totalElo + 160;
+                                break;
+                            case 27:
+                                totalElo = totalElo + 150;
+                                break;
+                            default:
+                                Console.WriteLine("Nothing");
+                                break;
                         }
+                    }
 
-                        google.InputElo(team.ToString(), totalElo);
-                        await ReplyAsync(team + " has the starting elo of " + totalElo + "\n Added to googlesheet");
-                        MongoDB mongo = new MongoDB();
-                        bool working = await mongo.InputElo(team.ToString(), totalElo);
-                        if (working)
-                        {
-                            Console.WriteLine("added elo");
+                    google.InputElo(team.ToString(), totalElo);
+                    await ReplyAsync(team + " has the starting elo of " + totalElo + "\n Added to googlesheet");
+                    MongoDB mongo = new MongoDB();
+                    bool working = await mongo.InputElo(team.ToString(), totalElo);
+                    if (working)
+                    {
+                        Console.WriteLine("added elo");
 
-                        }
-                        else
-                        {
-                            await ReplyAsync("did not add to database correctly, make sure this team is in database.");
-                        }
-
+                    }
+                    else
+                    {
+                        await ReplyAsync("did not add to database correctly, make sure this team is in database.");
                     }
 
                 }
 
-                [Command("checkpay", RunMode = RunMode.Async)]
-                [Summary("!checkpay @team (checks if team has paid)")]
-                //checks if team paid
-                public async Task checkPaid(IRole role)
-                {
+            }
+
+            [Command("checkpay", RunMode = RunMode.Async)]
+            [Summary("!checkpay @team (checks if team has paid)")]
+            //checks if team paid
+            public async Task checkPaid(IRole role)
+            {
                 if (work == false)
                 {
                     await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                     return;
                 }
                 var mongo = new MongoDB();
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+
+
+                    bool paidSuccess = await mongo.checkPaid(role.Name.ToString());
+
+                    if (paidSuccess)
                     {
+                        await ReplyAsync("This team has paid.");
+                    }
+                    else
+                    {
+                        await ReplyAsync("Team hasn't paid, or doesn't exist.");
+                    }
+                }
 
-
-                        bool paidSuccess = await mongo.checkPaid(role.Name.ToString());
+            }
+            [Command("paid", RunMode = RunMode.Async)]
+            [Summary("!paid @team (marks team as paid in database)")]
+            //changes team status to paid
+            public async Task paid(IRole role)
+            {
+                if (work == false)
+                {
+                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
+                    return;
+                }
+                var mongo = new MongoDB();
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    await ReplyAsync("Has " + role.Name + " team paid? 'yes' or 'no' ");
+                    var yesThisTeam = await NextMessageAsync();
+                    if (yesThisTeam.ToString().ToLower() == "yes")
+                    {
+                        bool paidSuccess = await mongo.paid(role.Name.ToString());
 
                         if (paidSuccess)
                         {
-                            await ReplyAsync("This team has paid.");
+                            await ReplyAsync("Successfully changed team status to paid");
                         }
                         else
                         {
-                            await ReplyAsync("Team hasn't paid, or doesn't exist.");
-                        }
-                    }
-
-                }
-                [Command("paid", RunMode = RunMode.Async)]
-                [Summary("!paid @team (marks team as paid in database)")]
-                //changes team status to paid
-                public async Task paid(IRole role)
-                {
-                if (work == false)
-                {
-                    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
-                    return;
-                }
-                var mongo = new MongoDB();
-                    var user = Context.User as SocketGuildUser;
-                    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-                    if (user.Roles.Contains(rolePermissionAdmin))
-                    {
-                        await ReplyAsync("Has " + role.Name + " team paid? 'yes' or 'no' ");
-                        var yesThisTeam = await NextMessageAsync();
-                        if (yesThisTeam.ToString().ToLower() == "yes")
-                        {
-                            bool paidSuccess = await mongo.paid(role.Name.ToString());
-
-                            if (paidSuccess)
-                            {
-                                await ReplyAsync("Successfully changed team status to paid");
-                            }
-                            else
-                            {
-                                await ReplyAsync("No team found with that name.");
-                            }
+                            await ReplyAsync("No team found with that name.");
                         }
                     }
                 }
+            }
             [Command("rename", RunMode = RunMode.Async)]
             [Summary("!rename @team newname (lets you rename a team")]
             public async Task rename(IRole role, [Remainder] string newName)
@@ -3484,7 +3491,7 @@ namespace DiscordBotApp.Modules
                 //    await ReplyAsync("Innti is working and doesn't want to have something mess up if this bot is on while he's developing. If you need something please reach out to him so he can turn normal bot functionality on.");
                 //    return;
                 //}
-                if(newName == null)
+                if (newName == null)
                 {
                     await ReplyAsync("new name not typed");
                     return;
@@ -3498,22 +3505,22 @@ namespace DiscordBotApp.Modules
                     await ReplyAsync("Are you sure you want to rename " + role.Name + " to " + newName + "? 'yes' or 'no'");
                     var response = await NextMessageAsync();
 
-                    if(response == null)
+                    if (response == null)
                     {
                         await ReplyAsync("No answer");
                         return;
                     }
                     if (response.ToString().ToLower() == "yes")
                     {
-                       await google.renameTeam(role.Name, newName);
-                        
-                       await mongo.renameTeam(role.Name, newName);
-                       await google.TeamName(newName);
+                        await google.renameTeam(role.Name, newName);
+
+                        await mongo.renameTeam(role.Name, newName);
+                        await google.TeamName(newName);
                         try
                         {
                             string[] channelIds = await mongo.getChannelIds(role.Name);
                             var channelText = Context.Guild.GetTextChannel(ulong.Parse(channelIds[0])) as IGuildChannel;
-                            var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1]))as IGuildChannel;
+                            var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelIds[1])) as IGuildChannel;
                             await channelText.ModifyAsync(x => { x.Name = newName; });
                             await channelVoice.ModifyAsync(x => { x.Name = newName; });
                         }
@@ -3524,21 +3531,21 @@ namespace DiscordBotApp.Modules
                         await role.ModifyAsync(x => { x.Name = newName; });
                         await ReplyAsync("Changed teamname ");
                     }
-                    else if(response.ToString().ToLower() == "no")
+                    else if (response.ToString().ToLower() == "no")
                     {
                         await ReplyAsync("Okay, nothing changed");
                         return;
                     }
-                   
+
 
                 }
             }
             ////[Command("temp", RunMode = RunMode.Async)]
-            
+
             //////changes team status to paid
             ////public async Task temp()
             ////{
-               
+
             ////    var mongo = new MongoDB();
             ////    var user = Context.User as SocketGuildUser;
             ////    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
@@ -3549,9 +3556,9 @@ namespace DiscordBotApp.Modules
             ////}
         }
 
-        }
     }
+}
 
 
 
-    
+

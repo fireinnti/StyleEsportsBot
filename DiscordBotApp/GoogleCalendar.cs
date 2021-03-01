@@ -61,7 +61,7 @@ namespace CalendarStyle
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
 
             // List events.
-            
+
             Events events = request.Execute();
             string[] sentEvents = new string[events.Items.Count];
             Console.WriteLine("Upcoming events:");
@@ -85,8 +85,8 @@ namespace CalendarStyle
                 Console.WriteLine("No upcoming events found.");
             }
             return sentEvents;
-            
-            
+
+
         }
 
 
@@ -127,7 +127,7 @@ namespace CalendarStyle
                 {
                     DateTime = DateTime.Parse(XmlConvert.ToString(scheduledDate, XmlDateTimeSerializationMode.Utc)).AddHours(5),
                     TimeZone = timeZone,
-                   
+
                 },
                 End = new EventDateTime()
                 {
@@ -141,7 +141,7 @@ namespace CalendarStyle
  America / Los_Angeles pacific*/
 
             };
-            Console.WriteLine("converted time " +scheduledDate.ToUniversalTime());
+            Console.WriteLine("converted time " + scheduledDate.ToUniversalTime());
 
             EventsResource.InsertRequest request = service.Events.Insert(newEvent, googleCalendarUrl);
             try
@@ -150,12 +150,12 @@ namespace CalendarStyle
                 Console.WriteLine("Event created: {0}", createdEvent.HtmlLink);
                 return createdEvent.Id;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex + " exception");
             }
-            
-            
+
+
 
             // Define parameters of request.
             /*EventsResource.ListRequest request = service.Events.List("r6addjhbp2mlduvh1o9mq9gua0@group.calendar.google.com");
