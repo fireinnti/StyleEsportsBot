@@ -790,37 +790,72 @@ namespace DiscordBotApp.Modules
 
                 var channel = Context.Guild as SocketGuild;
                 MongoDB mongo = new MongoDB();
-                bool[] channelExists = await mongo.getChannelExists(yourteam.Name, opposingTeam.Name);
+                string[] channelExists = await mongo.getChannelExists(yourteam.Name, opposingTeam.Name);
 
                 RestVoiceChannel createVoiceChannelFriendly = null;
+                SocketGuildChannel voiceChannelFriendly = null;
                 RestVoiceChannel createVoiceChannelEnemy = null;
+                SocketGuildChannel voiceChannelEnemy = null;
 
                 //Style Main Server Category ID: 819046507109416980 
                 ulong matchChannelCategory = 819045917541531688;
 
                 var canJoinPermission = new OverwritePermissions(36701696, 0);
                 var canSeePermission = new OverwritePermissions(1024, 0);
-                if (!channelExists[0])
+                if (channelExists[0] == "")
                 {
                     createVoiceChannelFriendly = await channel.CreateVoiceChannelAsync(yourteam.Name, channel => channel.CategoryId = matchChannelCategory, default);
-                    Console.WriteLine("before role create");
+                    await createVoiceChannelFriendly.AddPermissionOverwriteAsync(yourteam, canJoinPermission);
+                    await createVoiceChannelFriendly.AddPermissionOverwriteAsync(opposingTeam, canSeePermission);
+                    await mongo.inputVoiceChannelId(createVoiceChannelFriendly.Id.ToString(), yourteam.Name);
+
+                } else
+                {
+                    voiceChannelFriendly = channel.GetVoiceChannel(ulong.Parse(channelExists[0]));
+                    await voiceChannelFriendly.AddPermissionOverwriteAsync(opposingTeam, canSeePermission);
                 }
 
-                if (!channelExists[1])
+                if (channelExists[1] == "")
                 {
                     createVoiceChannelEnemy = await channel.CreateVoiceChannelAsync(opposingTeam.Name, channel => channel.CategoryId = matchChannelCategory, default);
-                    Console.WriteLine("before role create");
+                    await createVoiceChannelEnemy.AddPermissionOverwriteAsync(opposingTeam, canJoinPermission);
+                    await createVoiceChannelEnemy.AddPermissionOverwriteAsync(yourteam, canSeePermission);
+                    await mongo.inputVoiceChannelId(createVoiceChannelEnemy.Id.ToString(), opposingTeam.Name);
+
+                }
+                else
+                {
+                    voiceChannelEnemy = channel.GetVoiceChannel(ulong.Parse(channelExists[1]));
+                    await voiceChannelEnemy.AddPermissionOverwriteAsync(yourteam, canSeePermission);
                 }
 
-                //Can Join
-                await createVoiceChannelFriendly.AddPermissionOverwriteAsync(yourteam, canJoinPermission);
-                await createVoiceChannelEnemy.AddPermissionOverwriteAsync(opposingTeam, canJoinPermission);
+                ////Can Join
+                //await createVoiceChannelFriendly.AddPermissionOverwriteAsync(yourteam, canJoinPermission);
+                //await createVoiceChannelEnemy.AddPermissionOverwriteAsync(opposingTeam, canJoinPermission);
 
 
-                //Can See
-                await createVoiceChannelFriendly.AddPermissionOverwriteAsync(opposingTeam, canSeePermission);
-                await createVoiceChannelEnemy.AddPermissionOverwriteAsync(yourteam, canSeePermission);
+                ////Can See
+                //await createVoiceChannelFriendly.AddPermissionOverwriteAsync(opposingTeam, canSeePermission);
+                //await createVoiceChannelEnemy.AddPermissionOverwriteAsync(yourteam, canSeePermission);
             }
+
+            [Command("tempDelete", RunMode = RunMode.Async)]
+            public async Task tempDelete(IRole yourTeam)
+            {
+                MongoDB mongo = new MongoDB();
+                bool upcomingMatch = await mongo.GetScheduleDetails(yourTeam.Name);
+                if (!upcomingMatch) { 
+                    string channelExists = await mongo.getChannelExists(yourTeam.Name);
+                    var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelExists));
+                    await channelVoice.DeleteAsync();
+                    await mongo.inputVoiceChannelId("", yourTeam.Name);
+                } 
+                else
+                {
+                    await ReplyAsync("There is a confirmed match on your schedule");
+                }
+            }
+
 
 
             [Command("schedule", RunMode = RunMode.Async)]
@@ -2852,6 +2887,11 @@ namespace DiscordBotApp.Modules
 
                             await mongo.changeMatchToResult(team.ToString(), opponentTeam.ToString());
 
+
+
+                            await tempDelete(team);
+                            await tempDelete(opponentTeam);
+                                
                             google.RemoveSchedule(team.ToString(), positionOfYourTeam, howManyInListYourTeam, opponentTeam.ToString(), positionOfOpposingTeam, howManyInListOpposingTeam, locationOfInput);
                             await ReplyAsync(team.ToString() + " elo changes by " + firstTeamChanged + ". " + opponentTeam.ToString() + " elo changed by " + secondTeamChanged);
                         }
@@ -3579,6 +3619,24 @@ namespace DiscordBotApp.Modules
                     }
 
 
+                }
+            }
+
+            [Command("tempDelete", RunMode = RunMode.Async)]
+            public async Task tempDelete(IRole yourTeam)
+            {
+                MongoDB mongo = new MongoDB();
+                bool upcomingMatch = await mongo.GetScheduleDetails(yourTeam.Name);
+                if (!upcomingMatch)
+                {
+                    string channelExists = await mongo.getChannelExists(yourTeam.Name);
+                    var channelVoice = Context.Guild.GetVoiceChannel(ulong.Parse(channelExists));
+                    await channelVoice.DeleteAsync();
+                    await mongo.inputVoiceChannelId("", yourTeam.Name);
+                }
+                else
+                {
+                    await ReplyAsync("There is a confirmed match on your schedule");
                 }
             }
             ////[Command("temp", RunMode = RunMode.Async)]
