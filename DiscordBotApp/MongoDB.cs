@@ -973,10 +973,10 @@ namespace DiscordBotApp
         
 
         //Method to collect information on Voice Channel Existing for friendly and enemy team on confirmSchedule
-        public async Task<bool[]> getChannelExists(string team, string opposingTeam)
+        public async Task<string[]> getChannelExists(string team, string opposingTeam)
         {
             string mongoKey;
-            bool[] teamHasVcArray= new bool[2];
+            string[] teamHasVcArray= new string[2];
             mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
 
             var connectionString = mongoKey;
@@ -990,24 +990,31 @@ namespace DiscordBotApp
             var friendlyTeam = await collectionChannelIds.Find(filterTeam).FirstOrDefaultAsync();
             var enemyTeam = await collectionChannelIds.Find(filterOpposingTeam).FirstOrDefaultAsync();
 
-            if (friendlyTeam["TeamVoiceChannel"].ToString() != "")
-            {
-                teamHasVcArray[0] = true;
-            } else
-            {
-                teamHasVcArray[0] = false;
-            }
-
-            if (enemyTeam["TeamVoiceChannel"].ToString() != "")
-            {
-                teamHasVcArray[1] = true;
-            } else
-            {
-                teamHasVcArray[1] = false;
-            }
-
+           
+            teamHasVcArray[0] = friendlyTeam["TeamVoiceChannel"].ToString();
+            teamHasVcArray[1] = enemyTeam["TeamVoiceChannel"].ToString();
             return teamHasVcArray;
         } // end getChannelExists()
+
+        //Overloaded version of previous method to find the channel string for team looked up
+        public async Task<string> getChannelExists(string team)
+        {
+            string mongoKey;
+            string teamHasVc = "";
+
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            var database = client.GetDatabase("StyleData");
+            var collectionChannelIds = database.GetCollection<BsonDocument>("Team");
+
+            var filterTeam = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            var friendlyTeam = await collectionChannelIds.Find(filterTeam).FirstOrDefaultAsync();
+            teamHasVc = friendlyTeam["TeamVoiceChannel"].ToString();
+            return teamHasVc;
+        }
 
         //gets schedule details
         public async Task<matches> GetScheduleDetails(string team, string opposingTeam, bool reschedule, string date)
@@ -1094,6 +1101,67 @@ namespace DiscordBotApp
                 return match;
             }
             return null;
+        }
+
+
+
+        public async Task<bool> GetScheduleDetails(string team)
+        {
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            //creates matches object
+            matches match = new matches();
+
+            var database = client.GetDatabase("StyleData");
+
+            //makes sure getting collection of two teams
+            var collectionChallenges = database.GetCollection<BsonDocument>("Matches");
+
+            var filterChallenger = Builders<BsonDocument>.Filter.Eq("Challenger", team);
+            var filterChallengee = Builders<BsonDocument>.Filter.Eq("Challengee", team);
+            var filterSchedule = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
+            FilterDefinition<BsonDocument> combineFilters = Builders<BsonDocument>.Filter.And(filterChallenger, filterSchedule);
+            FilterDefinition<BsonDocument> combineFiltersChallengee = Builders<BsonDocument>.Filter.And(filterChallengee, filterSchedule);
+            var document = collectionChallenges.Find(combineFilters).FirstOrDefault();
+            if (document != null)
+            {
+                return true;
+            } 
+            else 
+            {
+                document = collectionChallenges.Find(combineFiltersChallengee).FirstOrDefault();
+                if (document != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public async Task inputVoiceChannelId(string id, string team)
+        {
+            string mongoKey;
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+            Console.WriteLine(client);
+            var database = client.GetDatabase("StyleData");
+            //starts a collection
+            var collection = database.GetCollection<BsonDocument>("Team");
+            var filter = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            var document = collection.Find(filter).FirstOrDefaultAsync();
+
+            if (document != null)
+            {
+                var update = Builders<BsonDocument>.Update.Set("TeamVoiceChannel", id);
+                await collection.UpdateOneAsync(filter, update);
+            }
         }
 
         public async Task<bool> Schedule(matches match)
