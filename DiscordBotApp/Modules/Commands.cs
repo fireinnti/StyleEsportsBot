@@ -320,13 +320,13 @@ namespace DiscordBotApp.Modules
                     // .WithText($"sdf[Multi.opgg link]({hyperLink})")
                     //  .WithIconUrl("https://discord.com/assets/28174a34e77bb5e5310ced9f95cb480b.png");
                     var embed = new EmbedBuilder()
-                            .AddField(exampleField)
-                            .WithThumbnailUrl(logo)
-                            .AddField(otherField)
-                            .AddField(winLossField)
+                           .AddField(exampleField)
+                           .WithThumbnailUrl(logo)
+                           .AddField(otherField)
+                           .AddField(winLossField)
                            .AddField(playerField)
                            .AddField(multiField)
-                            .WithAuthor(exampleAuthor);
+                           .WithAuthor(exampleAuthor);
 
 
 
@@ -2025,7 +2025,7 @@ namespace DiscordBotApp.Modules
         public class adminCommands : InteractiveBase
         {
 #if DEBUG
-            public bool work = false;
+            public bool work = true;
 #else
         public bool work = true;
 #endif
@@ -3540,20 +3540,20 @@ namespace DiscordBotApp.Modules
 
                 }
             }
-            ////[Command("temp", RunMode = RunMode.Async)]
+            [Command("temp", RunMode = RunMode.Async)]
 
-            //////changes team status to paid
-            ////public async Task temp()
-            ////{
+            //temp command when mass changing databases.
+            public async Task temp()
+            {
 
-            ////    var mongo = new MongoDB();
-            ////    var user = Context.User as SocketGuildUser;
-            ////    var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
-            ////    if (user.Roles.Contains(rolePermissionAdmin))
-            ////    {
-            ////        await mongo.temp();
-            ////    }
-            ////}
+                var mongo = new MongoDB();
+                var user = Context.User as SocketGuildUser;
+                var rolePermissionAdmin = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Admin");
+                if (user.Roles.Contains(rolePermissionAdmin))
+                {
+                    await mongo.temp();
+                }
+            }
         }
 
     }

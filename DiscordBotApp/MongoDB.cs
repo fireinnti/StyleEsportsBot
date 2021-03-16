@@ -285,7 +285,8 @@ namespace DiscordBotApp
                 {"Logo", mongoTeam.Logo },
                 {"Org", mongoTeam.Org },
                 {"TeamTextChannel", mongoTeam.TeamTextChannel },
-                {"TeamVoiceChannel", mongoTeam.TeamVoiceChannel }
+                {"TeamVoiceChannel", mongoTeam.TeamVoiceChannel },
+                {"InPlayoff",false}
 
 
 
@@ -1247,13 +1248,13 @@ namespace DiscordBotApp
 
             //used to add to all collection
 
-            var teamAll = Builders<BsonDocument>.Filter.Eq("MatchStatus", "confirmedschedule");
-            BsonDocument document = await matchCollection.Find(teamAll).FirstOrDefaultAsync();
+            var teamAll = Builders<BsonDocument>.Filter.Eq("Org","");
+            
 
 
-            var updateDocument = Builders<BsonDocument>.Update.Set("MatchStatus", "finishedmatch");
+            var updateDocument = Builders<BsonDocument>.Update.Set("InPlayoff",false);
 
-            await matchCollection.UpdateManyAsync(teamAll, updateDocument);
+            await teamCollection.UpdateManyAsync(teamAll,updateDocument);
             //FilterDefinitionBuilder<BsonDocument> builder = Builders<BsonDocument>.Filter;
             //FilterDefinition<BsonDocument> filter = builder.Eq("Ign", document["Top"]) & builder.Eq("Ign", document["Jg"]) & builder.Eq("Ign", document["Mid"]) & builder.Eq("Ign", document["Adc"]) & builder.Eq("Ign", document["Sup"]);
 
