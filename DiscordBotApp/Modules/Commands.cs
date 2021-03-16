@@ -135,7 +135,7 @@ namespace DiscordBotApp.Modules
             }
             //creates bool if a command should work while in debug mode
 #if DEBUG
-            public bool work = false;
+            public bool work = true;
 #else
         public bool work = true;
 #endif
@@ -746,6 +746,8 @@ namespace DiscordBotApp.Modules
                                     string id = calendar.AddMatch(yourteam.ToString(), opposingTeam.ToString(), convertedDate, timeZone);
 
                                     confirmMong = await mongo.confirmSchedule(yourteam.Name, opposingTeam.Name, locationOfInput, id);
+                                   
+
 
 
 
@@ -779,6 +781,45 @@ namespace DiscordBotApp.Modules
                 {
                     await ReplyAsync("You are not the team captain of the first team in the command " + yourteam.ToString() + " or an admin");
                 }
+            }
+            
+
+            [Command("TempMake", RunMode = RunMode.Async)]
+            public async Task TempMake(IRole yourteam, IRole opposingTeam)
+            {
+
+                var channel = Context.Guild as SocketGuild;
+                MongoDB mongo = new MongoDB();
+                bool[] channelExists = await mongo.getChannelExists(yourteam.Name, opposingTeam.Name);
+
+                RestVoiceChannel createVoiceChannelFriendly = null;
+                RestVoiceChannel createVoiceChannelEnemy = null;
+
+                //Style Main Server Category ID: 819046507109416980 
+                ulong matchChannelCategory = 819045917541531688;
+
+                var canJoinPermission = new OverwritePermissions(36701696, 0);
+                var canSeePermission = new OverwritePermissions(1024, 0);
+                if (!channelExists[0])
+                {
+                    createVoiceChannelFriendly = await channel.CreateVoiceChannelAsync(yourteam.Name, channel => channel.CategoryId = matchChannelCategory, default);
+                    Console.WriteLine("before role create");
+                }
+
+                if (!channelExists[1])
+                {
+                    createVoiceChannelEnemy = await channel.CreateVoiceChannelAsync(opposingTeam.Name, channel => channel.CategoryId = matchChannelCategory, default);
+                    Console.WriteLine("before role create");
+                }
+
+                //Can Join
+                await createVoiceChannelFriendly.AddPermissionOverwriteAsync(yourteam, canJoinPermission);
+                await createVoiceChannelEnemy.AddPermissionOverwriteAsync(opposingTeam, canJoinPermission);
+
+
+                //Can See
+                await createVoiceChannelFriendly.AddPermissionOverwriteAsync(opposingTeam, canSeePermission);
+                await createVoiceChannelEnemy.AddPermissionOverwriteAsync(yourteam, canSeePermission);
             }
 
 

@@ -970,6 +970,45 @@ namespace DiscordBotApp
             }
             return null;
         }
+        
+
+        //Method to collect information on Voice Channel Existing for friendly and enemy team on confirmSchedule
+        public async Task<bool[]> getChannelExists(string team, string opposingTeam)
+        {
+            string mongoKey;
+            bool[] teamHasVcArray= new bool[2];
+            mongoKey = ConfigurationManager.AppSettings.Get("mongoIP");
+
+            var connectionString = mongoKey;
+            var client = new MongoClient(connectionString);
+
+            var database = client.GetDatabase("StyleData");
+            var collectionChannelIds = database.GetCollection<BsonDocument>("Team");
+
+            var filterTeam = Builders<BsonDocument>.Filter.Eq("TeamName", team);
+            var filterOpposingTeam = Builders<BsonDocument>.Filter.Eq("TeamName", opposingTeam);
+            var friendlyTeam = await collectionChannelIds.Find(filterTeam).FirstOrDefaultAsync();
+            var enemyTeam = await collectionChannelIds.Find(filterOpposingTeam).FirstOrDefaultAsync();
+
+            if (friendlyTeam["TeamVoiceChannel"].ToString() != "")
+            {
+                teamHasVcArray[0] = true;
+            } else
+            {
+                teamHasVcArray[0] = false;
+            }
+
+            if (enemyTeam["TeamVoiceChannel"].ToString() != "")
+            {
+                teamHasVcArray[1] = true;
+            } else
+            {
+                teamHasVcArray[1] = false;
+            }
+
+            return teamHasVcArray;
+        } // end getChannelExists()
+
         //gets schedule details
         public async Task<matches> GetScheduleDetails(string team, string opposingTeam, bool reschedule, string date)
         {
