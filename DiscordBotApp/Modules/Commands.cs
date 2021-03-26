@@ -1047,6 +1047,7 @@ namespace DiscordBotApp.Modules
                         {
 
                             var isCaptain = (user as IGuildUser).Guild.Roles.FirstOrDefault(x => x.Name == "Team Captain");
+                            await ReplyAsync("Sending dm to captain of " + team2 + " to confirm time");
                             if (user.Roles.Contains(isCaptain))
                             {
 
@@ -1060,7 +1061,7 @@ namespace DiscordBotApp.Modules
                             Console.WriteLine("in for each" + user);
 
                         }
-                        await ReplyAsync("Sending dm to captain of " + team2 + " to confirm time");
+                       
                         var channelIdLogs = channel.GetTextChannel(767455535800385616).SendMessageAsync(Context.User.Username + " has used the schedule command for " + team1.ToString() + " versus " + team2.ToString() + " at " + convertedDate);
                     }
                     else
